@@ -16,7 +16,6 @@ tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"]}
 raw-window-handle = "0.5.2"
 futures = "0.3.28"
-xdg = "2.5.2"
 wayland-backend = { version = "0.3.2", features = ["client_system"]}
 femtovg = "0.8.2"
 glutin = "0.30.10"
