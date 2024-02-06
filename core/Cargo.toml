@@ -10,16 +10,10 @@ repository = "https://github.com/mecha-org/mctk"
 homepage = "https://mecha.so"
 
 [dependencies]
-smithay-client-toolkit = "0.18.0"
 anyhow = { version = "1.0.75", features = ["backtrace"]}
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"]}
-raw-window-handle = "0.5.2"
 futures = "0.3.28"
-smithay-clipboard = "0.7.0"
 xdg = "2.5.2"
-sysinfo = "0.29.10"
-wayland-backend = { version = "0.3.2", features = ["client_system"]}
-tokio = { version="1.35.1", features=["time"] }
 femtovg = "0.8.2"
 glutin = "0.30.10"
