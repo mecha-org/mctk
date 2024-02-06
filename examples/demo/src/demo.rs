@@ -1,10 +1,10 @@
-use femtovg::{renderer::OpenGl, Canvas, Color};
-use glutin::{
-    api::egl::{context::PossiblyCurrentContext, surface::Surface},
-    surface::{GlSurface, WindowSurface},
-};
 use mctk_core::{
     app::{CanvasApplication, Event, Viewport},
+    femtovg::{renderer::OpenGl, Canvas, Color},
+    glutin::{
+        api::egl::{context::PossiblyCurrentContext, surface::Surface},
+        surface::{GlSurface, WindowSurface},
+    },
     input::pointer::{Cursor, MouseEvent},
 };
 
