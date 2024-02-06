@@ -5,8 +5,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
-mctk.workspace = true
-mctk_core = { path = "../../core" }
+mctk_core = { path = "../../core", version = "0.1.0" }
 smithay-client-toolkit = "0.18.0"
 femtovg = "0.8.2"
 glutin = "0.30.10"

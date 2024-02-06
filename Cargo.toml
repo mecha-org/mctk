@@ -9,12 +9,10 @@ license = "MIT"
 repository = "https://github.com/mecha-org/mctk"
 homepage = "https://mecha.so"
 
-[dependencies]
-mctk_core.workspace = true
-
 [workspace]
 members = ["core", "examples/*"]
 
-[workspace.dependencies]
-mctk = { version = "0.1", path = "." }
+[dependencies]
 mctk_core = { version = "0.1", path = "core" }
+
+

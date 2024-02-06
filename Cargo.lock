@@ -225,7 +225,6 @@ dependencies = [
  "anyhow",
  "femtovg",
  "glutin",
- "mctk",
  "mctk_core",
  "smithay-client-toolkit",
  "tracing",
