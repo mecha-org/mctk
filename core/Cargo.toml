@@ -1,6 +1,6 @@
 [package]
 name = "mctk_core"
-description = "mctk"
+description = "Core of Mecha toolkit for Linux Wayland Clients"
 version = "0.1.0"
 authors = ["Akshay Raina <akshayr@mechasystems.com", "Shoaib Merchant <shoaibm@mechasystems.com>"]
 documentation = "https://docs.mecha.so"
