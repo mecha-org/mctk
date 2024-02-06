@@ -1,11 +1,11 @@
 use mctk_core::{
     app::{CanvasApplication, Event, Viewport},
-    femtovg::{renderer::OpenGl, Canvas, Color},
-    glutin::{
+    input::pointer::{Cursor, MouseEvent},
+    reexports::femtovg::{renderer::OpenGl, Canvas, Color},
+    reexports::glutin::{
         api::egl::{context::PossiblyCurrentContext, surface::Surface},
         surface::{GlSurface, WindowSurface},
     },
-    input::pointer::{Cursor, MouseEvent},
 };
 
 pub enum Message {

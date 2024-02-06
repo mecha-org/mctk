@@ -1,9 +1,11 @@
 mod demo;
 use demo::DemoApp;
-use mctk_core::layer_shell::{LayerShellApplication, LayerShellOptions, WindowOptions};
-use smithay_client_toolkit::{
-    reexports::calloop::timer::{TimeoutAction, Timer},
-    shell::wlr_layer,
+use mctk_core::{
+    layer_shell::{LayerShellApplication, LayerShellOptions, WindowOptions},
+    reexports::smithay_client_toolkit::{
+        reexports::calloop::timer::{TimeoutAction, Timer},
+        shell::wlr_layer,
+    },
 };
 use std::time::Duration;
 use tracing_subscriber::EnvFilter;

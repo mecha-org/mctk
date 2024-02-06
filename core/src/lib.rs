@@ -5,5 +5,8 @@ pub mod input;
 pub mod layer_shell;
 pub mod raw_handle;
 
-pub use femtovg;
-pub use glutin;
+pub mod reexports {
+    pub use femtovg;
+    pub use glutin;
+    pub use smithay_client_toolkit;
+}
