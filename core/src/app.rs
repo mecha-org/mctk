@@ -1,6 +1,9 @@
-use femtovg::{renderer::OpenGl, Canvas};
-use glutin::{api::egl::{context::PossiblyCurrentContext, surface::Surface}, surface::WindowSurface};
 use super::input::pointer::{Cursor, MouseEvent};
+use femtovg::{renderer::OpenGl, Canvas};
+use glutin::{
+    api::egl::{context::PossiblyCurrentContext, surface::Surface},
+    surface::WindowSurface,
+};
 
 #[derive(Debug, Clone)]
 pub struct Viewport {
@@ -15,13 +18,20 @@ pub enum Event {
 }
 
 pub trait CanvasApplication {
+    fn init(
+        &mut self,
+        gl_context: &PossiblyCurrentContext,
+        gl_surface: &Surface<WindowSurface>,
+        canvas: &mut Canvas<OpenGl>,
+        viewport: &Viewport,
+    );
     fn dispatch(
         &mut self,
         gl_context: &PossiblyCurrentContext,
         gl_surface: &Surface<WindowSurface>,
         canvas: &mut Canvas<OpenGl>,
         viewport: &Viewport,
-        cursor: Cursor
+        cursor: Cursor,
     );
     fn push_event(&mut self, event: Event);
     fn render(
@@ -29,6 +39,6 @@ pub trait CanvasApplication {
         gl_context: &PossiblyCurrentContext,
         gl_surface: &Surface<WindowSurface>,
         canvas: &mut Canvas<OpenGl>,
-        viewport: &Viewport
+        viewport: &Viewport,
     );
 }

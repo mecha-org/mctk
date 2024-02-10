@@ -33,6 +33,15 @@ impl DemoApp {
 }
 
 impl CanvasApplication for DemoApp {
+    fn init(
+        &mut self,
+        gl_context: &PossiblyCurrentContext,
+        gl_surface: &Surface<WindowSurface>,
+        canvas: &mut Canvas<OpenGl>,
+        viewport: &Viewport,
+    ) {
+    }
+
     fn push_event(&mut self, event: Event) {
         // println!("event received event={:?}", event);
         let _ = &self.event_queue.push(event);

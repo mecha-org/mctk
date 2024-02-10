@@ -189,6 +189,7 @@ impl<T: CanvasApplication + 'static> LayerShellApplication<T> {
 
         // update and render
         if !self.initial_configure_sent {
+            self.init();
             self.render();
         } else {
             self.dispatch();
@@ -203,6 +204,15 @@ impl<T: CanvasApplication + 'static> LayerShellApplication<T> {
             .frame(queue_handle, self.layer.wl_surface().clone());
 
         self.layer.commit();
+    }
+
+    pub fn init(&mut self) {
+        let _ = &self.app.init(
+            &self.gl_context,
+            &self.gl_surface,
+            &mut self.gl_canvas,
+            &self.viewport,
+        );
     }
 
     pub fn render(&mut self) {
