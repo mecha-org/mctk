@@ -1,0 +1,22 @@
+[package]
+name = "mctk_winit"
+version = "0.4.0"
+authors = ["Alex Charlton <alex.n.charlton@gmail.com>"]
+description = "winit windowing backend support for lemna"
+edition = "2021"
+repository = "https://github.com/AlexCharlton/lemna"
+documentation = "https://docs.rs/lemna"
+license = "MIT"
+
+[features]
+instrumented = ["mctk_core/instrumented"]
+
+[dependencies]
+mctk_core = { path = "../../core" }
+raw-window-handle = "0.5.2"
+winit = { version = "0.28" }
+
+[dev-dependencies]
+ttf-noto-sans = "0.1"
+mctk_macros = { path = "../../macros" }
+simplelog = "0.7"
