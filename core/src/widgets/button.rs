@@ -92,7 +92,7 @@ impl Component for Button {
             .style("size", self.style_val("font_size").unwrap())
             .style("color", self.style_val("text_color").unwrap())
             .style("h_alignment", HorizontalPosition::Left)
-            .style("font", "SpaceGrotesk-Bold"), [size_pct: [100, Auto],]));
+            .style("font", "SpaceGrotesk-Regular"), [size_pct: [100, Auto],]));
 
         // if let (Some(p), Some(tt)) = (self.state_ref().tool_tip_open, self.tool_tip.as_ref()) {
         //     base = base.push(node!(

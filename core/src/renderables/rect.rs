@@ -88,7 +88,7 @@ impl Rect {
         );
 
         //Add background image if any
-        let background = match bg_image {
+        let mut background = match bg_image {
             Some(image_id) => Paint::image(
                 image_id,
                 origin.x,

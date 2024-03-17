@@ -24,8 +24,8 @@ tracing-subscriber = { version = "0.3.17", features = ["env-filter"]}
 raw-window-handle = "0.5.2"
 futures = "0.3.28"
 wayland-backend = { version = "0.3.2", features = ["client_system"]}
-#femtovg = "0.8.2"
-femtovg = { path = "../../exploration/femtovg", features = ["image", "image-loading"], default-features = false }
+femtovg = {version = "0.8.2", features = ["image", "image-loading"], default-features = false }
+image = { version = "*", features = ["png", "jpeg"] }
 glutin = "0.30.10"
 euclid = "0.22.3"
 resource = "0.5.0"

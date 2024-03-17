@@ -3,6 +3,7 @@ use crate::event::{self, Event, EventCache, EventInput};
 use crate::input::*;
 use crate::instrumenting::*;
 use crate::layout::*;
+use crate::raw_handle::RawWaylandHandle;
 use crate::{component::Component, node::Node, types::PixelSize};
 use crate::{
     lay,
@@ -29,9 +30,9 @@ pub struct UI<W: Window, A: Component + Default + Send + Sync> {
     renderer: Arc<RwLock<Option<ActiveRenderer>>>,
     pub window: Arc<RwLock<W>>,
     // _render_thread: JoinHandle<()>,
-    _draw_thread: JoinHandle<()>,
+    _draw_thread: Option<JoinHandle<()>>,
     // render_channel: Sender<()>,
-    draw_channel: Sender<()>,
+    draw_channel: Option<Sender<()>>,
     node: Arc<RwLock<Node>>,
     phantom_app: PhantomData<A>,
     registrations: Arc<RwLock<Vec<Registration>>>,
@@ -96,40 +97,10 @@ impl<W: 'static + Window, A: 'static + Component + Default + Send + Sync> UI<W, 
         self.node.write().unwrap()
     }
 
-    // fn render_thread(
-    //     receiver: Receiver<()>,
-    //     renderer: Arc<RwLock<Option<ActiveRenderer>>>,
-    //     node: Arc<RwLock<Node>>,
-    //     physical_size: Arc<RwLock<PixelSize>>,
-    //     frame_dirty: Arc<RwLock<bool>>,
-    // ) -> JoinHandle<()> {
-    //     thread::spawn(move || {
-    //         for _ in receiver.iter() {
-    //             println!("ui::render_thread!");
-    //             // if *frame_dirty.read().unwrap() {
-
-    //             // }
-    //             inst("UI::render");
-    //                 // Pull out size so it gets pulled into the renderer lock
-    //                 let size = *physical_size.read().unwrap();
-    //                 renderer
-    //                     .write()
-    //                     .unwrap()
-    //                     .as_mut()
-    //                     .unwrap()
-    //                     .render(&node.read().unwrap(), size);
-    //                 *frame_dirty.write().unwrap() = false;
-    //                 // println!("rendered");
-    //                 inst_end();
-    //         }
-    //     })
-    // }
-
     fn draw_thread(
         receiver: Receiver<()>,
         renderer: Arc<RwLock<Option<ActiveRenderer>>>,
         node: Arc<RwLock<Node>>,
-        logical_size: Arc<RwLock<PixelSize>>,
         scale_factor: Arc<RwLock<f32>>,
         frame_dirty: Arc<RwLock<bool>>,
         node_dirty: Arc<RwLock<bool>>,
@@ -142,7 +113,7 @@ impl<W: 'static + Window, A: 'static + Component + Default + Send + Sync> UI<W, 
                     // Set the node to clean right away so that concurrent events can reset it to dirty
                     *node_dirty.write().unwrap() = false;
                     inst("UI::draw");
-                    let logical_size = *logical_size.read().unwrap();
+                    let logical_size = window.read().unwrap().logical_size();
                     let scale_factor = *scale_factor.read().unwrap();
                     let mut new = Node::new(
                         Box::<A>::default(),
@@ -154,6 +125,11 @@ impl<W: 'static + Window, A: 'static + Component + Default + Send + Sync> UI<W, 
                         // We need to lock the renderer while we modify the node, so that we don't try to render it while doing so
                         // Since this will cause a deadlock
                         let mut renderer = renderer.write().unwrap();
+
+                        if renderer.is_none() {
+                            *node_dirty.write().unwrap() = true;
+                            return;
+                        }
 
                         // We need to acquire a lock on the node once we `view` it, because we remove its state at this point
                         let mut old = node.write().unwrap();
@@ -200,10 +176,10 @@ impl<W: 'static + Window, A: 'static + Component + Default + Send + Sync> UI<W, 
         let mut component = A::default();
         component.init();
 
-        let renderer = Arc::new(RwLock::new(Some(ActiveRenderer::new(&window))));
+        // let renderer = Arc::new(RwLock::new(Some(ActiveRenderer::new(&window))));
+        let renderer = Arc::new(RwLock::new(None));
         let event_cache = EventCache::new(window.scale_factor());
         let window = Arc::new(RwLock::new(window));
-        // set_current_window(window.clone());
 
         // Root node
         let node = Arc::new(RwLock::new(Node::new(
@@ -215,37 +191,14 @@ impl<W: 'static + Window, A: 'static + Component + Default + Send + Sync> UI<W, 
         let node_dirty = Arc::new(RwLock::new(true));
         let registrations: Arc<RwLock<Vec<Registration>>> = Default::default();
 
-        // // Create a channel to speak to the renderer. Every time we send to this channel we want to trigger a render;
-        // let (render_channel, receiver) = unbounded::<()>();
-        // let render_thread = Self::render_thread(
-        //     receiver,
-        //     renderer.clone(),
-        //     node.clone(),
-        //     physical_size.clone(),
-        //     frame_dirty.clone(),
-        // );
-
-        // Create a channel to speak to the drawer. Every time we send to this channel we want to trigger a draw;
-        let (draw_channel, receiver) = unbounded::<()>();
-        let draw_thread = Self::draw_thread(
-            receiver,
-            renderer.clone(),
-            node.clone(),
-            logical_size.clone(),
-            scale_factor.clone(),
-            frame_dirty.clone(),
-            node_dirty.clone(),
-            registrations.clone(),
-            window.clone(),
-        );
 
         let n = Self {
             renderer,
             // render_channel,
             // _render_thread: render_thread,
             frame_dirty: frame_dirty.clone(),
-            draw_channel,
-            _draw_thread: draw_thread,
+            draw_channel: None,
+            _draw_thread: None,
             window,
             node,
             phantom_app: PhantomData,
@@ -260,6 +213,48 @@ impl<W: 'static + Window, A: 'static + Component + Default + Send + Sync> UI<W, 
         n
     }
 
+    pub fn configure(&mut self, width: u32, height: u32, wayland_handle: RawWaylandHandle) {
+        // block are intentional to drop window
+        {
+            let mut window = self.window.write().unwrap();
+
+            // update the size for window, ui
+            window.set_size(width, height);
+            window.set_wayland_handle(wayland_handle);
+            // let logical_size = window.logical_size();
+            self.logical_size = Arc::new(RwLock::new(window.logical_size()));
+        }
+        // reconfigure the renderer
+        let window = self.window.clone();
+        let renderer = Arc::new(RwLock::new(Some(ActiveRenderer::new(window.clone()))));
+
+        println!("renderer initialized");
+        self.renderer = renderer.clone();
+
+        // Create a channel to speak to the drawer. Every time we send to this channel we want to trigger a draw;
+        let (draw_channel, receiver) = unbounded::<()>();
+        let node = self.node.clone();
+        let scale_factor = Arc::new(RwLock::new(window.clone().read().unwrap().scale_factor()));
+        let frame_dirty = self.frame_dirty.clone();
+        let node_dirty = self.node_dirty.clone();
+        let registrations = self.registrations.clone();
+
+        let draw_thread = Self::draw_thread(
+            receiver,
+            renderer.clone(),
+            node,
+            // logical_size.clone(),
+            scale_factor,
+            frame_dirty,
+            node_dirty,
+            registrations,
+            window,
+        );
+
+        self._draw_thread = Some(draw_thread);
+        self.draw_channel = Some(draw_channel);
+    }
+
     /// Signal to the draw thread that it may be time to draw a redraw the app.
     /// This performs three actions:
     /// - View, which calls [`view`][Component#method.view] on the root Component and then recursively across the children of the returned Node, thus recreating the Node graph. This does a number of sub tasks:
@@ -272,7 +267,9 @@ impl<W: 'static + Window, A: 'static + Component + Default + Send + Sync> UI<W, 
     ///
     /// A draw will only occur if an event was handled that resulted in [`state_mut`][crate::state_component_impl] being called.
     pub fn draw(&mut self) {
-        self.draw_channel.send(()).unwrap();
+        if self.draw_channel.is_some() {
+            self.draw_channel.as_ref().unwrap().send(()).unwrap();
+        }
     }
 
     /// Signal to the render thread that it may be time to render a frame.
@@ -286,11 +283,13 @@ impl<W: 'static + Window, A: 'static + Component + Default + Send + Sync> UI<W, 
             inst("UI::render");
             // Pull out size so it gets pulled into the renderer lock
             let size = *self.physical_size.read().unwrap();
-            self.renderer
-                .write()
-                .unwrap()
-                .as_mut()
-                .unwrap()
+            let mut renderer = self.renderer.write().unwrap();
+
+            if (renderer.is_none()) {
+                return;
+            }
+            
+            renderer.as_mut().unwrap()
                 .render(&self.node.read().unwrap(), size);
             *frame_dirty.write().unwrap() = false;
             // println!("rendered");
@@ -322,7 +321,7 @@ impl<W: 'static + Window, A: 'static + Component + Default + Send + Sync> UI<W, 
 
     fn handle_dirty_event<T: EventInput>(&mut self, event: &Event<T>) {
         if event.dirty {
-            *self.node_dirty.write().unwrap() = true
+            *self.node_dirty.write().unwrap() = true;
         }
     }
 
@@ -373,7 +372,6 @@ impl<W: 'static + Window, A: 'static + Component + Default + Send + Sync> UI<W, 
                     *self.scale_factor.write().unwrap() = scale_factor;
                     self.event_cache.scale_factor = scale_factor;
                     *self.node_dirty.write().unwrap() = true;
-                    self.window.write().unwrap().redraw(); // Always redraw after resizing
                 }
             }
             Input::Motion(Motion::Mouse { x, y }) => {
@@ -652,8 +650,10 @@ impl<W: 'static + Window, A: 'static + Component + Default + Send + Sync> UI<W, 
             },
             Input::Exit => {
                 // clear_current_window();
-                let renderer = self.renderer.write().unwrap().take().unwrap();
-                drop(renderer);
+                let renderer = self.renderer.write().unwrap().take();
+                if renderer.is_some() {
+                    drop(renderer);
+                }
             }
             Input::Menu(id) => {
                 let current_focus = self.event_cache.focus;
@@ -693,6 +693,7 @@ impl<W: 'static + Window, A: 'static + Component + Default + Send + Sync> UI<W, 
                 }
             }
         }
+        self.window.write().unwrap().redraw(); // Always redraw after handle input
         // clear_immediate_focus();
         inst_end();
     }

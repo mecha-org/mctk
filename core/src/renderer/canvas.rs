@@ -11,6 +11,7 @@ use glutin::context::{
 use glutin::display::GlDisplay;
 use glutin::surface::{GlSurface, SurfaceAttributesBuilder, WindowSurface};
 use glutin::{api::egl::display::Display, config::ConfigTemplateBuilder};
+use raw_window_handle::{RawDisplayHandle, RawWindowHandle};
 use resource::resource;
 use std::collections::HashMap;
 use std::num::NonZeroU32;
@@ -31,13 +32,9 @@ pub struct SvgData {
     pub scale: Scale,
 }
 
-pub fn init_gl<W: crate::window::Window>(
-    window: &W,
-    (width, height): (u32, u32),
-) -> (Display, Surface<WindowSurface>, PossiblyCurrentContext) {
+pub fn init_gl_surface_context(raw_window_handle: RawWindowHandle,
+    (width, height): (u32, u32), gl_display: &Display) -> (Surface<WindowSurface>, PossiblyCurrentContext){
     let template = ConfigTemplateBuilder::new().with_alpha_size(8).build();
-    let gl_display =
-        unsafe { Display::new(window.raw_display_handle()).expect("Failed to create EGL Display") };
 
     let config = unsafe { gl_display.find_configs(template) }
         .unwrap()
@@ -56,9 +53,9 @@ pub fn init_gl<W: crate::window::Window>(
             .create_context(&config, &context_attributes)
             .expect("Failed to create OpenGL context")
     };
-
+    
     let attrs = SurfaceAttributesBuilder::<WindowSurface>::new().build(
-        window.raw_window_handle(),
+        raw_window_handle,
         NonZeroU32::new(width).unwrap(),
         NonZeroU32::new(height).unwrap(),
     );
@@ -72,6 +69,19 @@ pub fn init_gl<W: crate::window::Window>(
     let gl_context = not_current
         .make_current(&gl_surface)
         .expect("Failed to make newly created OpenGL context current");
+
+    (gl_surface, gl_context)
+}
+
+pub fn init_gl(
+    raw_display_handle: RawDisplayHandle,
+    raw_window_handle: RawWindowHandle,
+    (width, height): (u32, u32),
+) -> (Display, Surface<WindowSurface>, PossiblyCurrentContext) {
+    let gl_display =
+        unsafe { Display::new(raw_display_handle).expect("Failed to create EGL Display") };
+    
+    let (gl_surface, gl_context) = init_gl_surface_context(raw_window_handle, (width, height), &gl_display);
 
     (gl_display, gl_surface, gl_context)
 }
@@ -91,7 +101,54 @@ pub fn init_gl_canvas(
 
     canvas
 }
+
+fn init_canvas_renderer(raw_display_handle: RawDisplayHandle, raw_window_handle: RawWindowHandle, logical_size: PixelSize, scale_factor: f32, fonts: HashMap<String, String>, assets: HashMap<String, String>) -> (CanvasContext, HashMap<String, FontId>, HashMap<String, ImageId>) {
+    let size = logical_size;
+    let width = size.width;
+    let height = size.height;
+
+    let (gl_display, gl_surface, gl_context) =
+        init_gl(raw_display_handle, raw_window_handle, (width, height));
+    let mut gl_canvas = init_gl_canvas(&gl_display, (width, height), scale_factor);
+
+    let mut loaded_fonts = HashMap::new();
+
+    for (name, path_) in fonts.into_iter() {
+        match gl_canvas.add_font(path_.as_str()) {
+            Ok(font_id) => {
+                loaded_fonts.insert(name, font_id);
+            }
+            Err(e) => {
+                println!("error while loading font {:?} error: {:?}", name, e);
+            }
+        }
+    }
+
+    let mut loaded_assets = HashMap::new();
+
+    for (name, path_) in assets.into_iter() {
+        match gl_canvas.load_image_file(path_.as_str(), ImageFlags::empty()) {
+            Ok(font_id) => {
+                loaded_assets.insert(name, font_id);
+            }
+            Err(e) => {
+                println!("error while loading font {:?} error: {:?}", name, e);
+            }
+        }
+    };
+
+    let canvas_context = CanvasContext {
+        gl_canvas,
+        gl_context,
+        gl_display,
+        gl_surface,
+    };
+    
+    (canvas_context, loaded_fonts, loaded_assets)
+}
+
 pub struct CanvasContext {
+    gl_display: Display,
     // egl context, surface
     pub gl_context: PossiblyCurrentContext,
     pub gl_surface: egl::surface::Surface<WindowSurface>,
@@ -119,44 +176,17 @@ impl fmt::Debug for CanvasRenderer {
 }
 
 impl super::Renderer for CanvasRenderer {
-    fn new<W: crate::window::Window>(window: &W) -> Self {
-        let size = window.logical_size();
-        let width = size.width;
-        let height = size.height;
-        let scale_factor = window.scale_factor();
+    fn new<W: crate::window::Window>(w: Arc<RwLock<W>>) -> Self {
+        let window = w.read().unwrap();
 
-        let (gl_display, gl_surface, gl_context) = init_gl(window, (width, height));
-        let mut gl_canvas = init_gl_canvas(&gl_display, (width, height), scale_factor);
-
-        println!("create renderer {} {} {}", width, height, scale_factor);
-
-        let fonts = window.fonts();
-        let mut loaded_fonts = HashMap::new();
-
-        for (name, path_) in fonts.into_iter() {
-            match gl_canvas.add_font(path_.as_str()) {
-                Ok(font_id) => {
-                    loaded_fonts.insert(name, font_id);
-                }
-                Err(e) => {
-                    println!("error while loading font {:?} error: {:?}", name, e);
-                }
-            }
-        }
-
-        let assets = window.assets();
-        let mut loaded_assets = HashMap::new();
-
-        for (name, path_) in assets.into_iter() {
-            match gl_canvas.load_image_file(path_.as_str(), ImageFlags::empty()) {
-                Ok(font_id) => {
-                    loaded_assets.insert(name, font_id);
-                }
-                Err(e) => {
-                    println!("error while loading font {:?} error: {:?}", name, e);
-                }
-            }
-        }
+        let (canvas_context, fonts, assets) = init_canvas_renderer(
+            window.raw_display_handle(),
+            window.raw_window_handle(),
+            window.logical_size(),
+            window.scale_factor(),
+            window.fonts(),
+            window.assets(),
+        );
 
         let svgs = window.svgs();
         let mut loaded_svgs = HashMap::new();
@@ -178,15 +208,28 @@ impl super::Renderer for CanvasRenderer {
         }
 
         Self {
-            context: CanvasContext {
-                gl_context,
-                gl_surface,
-                gl_canvas,
-            },
-            fonts: loaded_fonts,
-            assets: loaded_assets,
+            context: canvas_context,
+            fonts,
+            assets,
             svgs: loaded_svgs,
         }
+    }
+
+    fn configure<W: crate::window::Window>(&mut self, w: Arc<RwLock<W>>) {
+        // re-initialize
+        let window = w.read().unwrap();
+        let (canvas_context, fonts, assets) = init_canvas_renderer(
+            window.raw_display_handle(),
+            window.raw_window_handle(),
+            window.logical_size(),
+            window.scale_factor(),
+            window.fonts(),
+            window.assets(),
+        ); 
+
+        self.context = canvas_context;
+        self.fonts = fonts;
+        self.assets = assets;
     }
 
     fn render(&mut self, node: &Node, _physical_size: PixelSize) {
@@ -195,9 +238,9 @@ impl super::Renderer for CanvasRenderer {
 
         let gl_context = &mut self.context.gl_context;
 
-        // let _ = gl_context
-        //     .make_current(surface)
-        //     .expect("Failed to make newly created OpenGL context current");
+        let _ = gl_context
+            .make_current(surface)
+            .expect("Failed to make newly created OpenGL context current");
 
         canvas.clear_rect(
             0,
@@ -229,9 +272,6 @@ impl super::Renderer for CanvasRenderer {
                 }
             }
         }
-
-        // Make smol red rectangle
-        // canvas.clear_rect(0, 0, 30, 30, Color::rgbf(0., 1., 0.));
 
         // Tell renderer to execute all drawing commands
         canvas.flush();

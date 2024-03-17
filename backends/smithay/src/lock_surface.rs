@@ -1,27 +1,13 @@
-use std::sync::{Arc, RwLock};
-
-use crate::{
-    gl::{init_gl, init_gl_canvas}, new_raw_wayland_handle, pointer::{convert_button, MouseEvent, Point, ScrollDelta}, PhysicalPosition, WindowEvent, WindowMessage, WindowOptions
+use crate::{new_raw_wayland_handle, pointer::{convert_button, MouseEvent, Point, ScrollDelta}, WindowEvent, WindowMessage, WindowOptions
 };
 use anyhow::Context;
-use glutin::api::egl::{self, context::PossiblyCurrentContext};
-use mctk_core::{
-    raw_handle::RawWaylandHandle,
-    reexports::{
-        femtovg::{self, Color},
-        glutin::{
-            self,
-            surface::{GlSurface, WindowSurface},
-        },
-    },
-    renderer::canvas::CanvasContext,
-};
+use mctk_core::raw_handle::RawWaylandHandle;
 use raw_window_handle::{
     RawDisplayHandle, RawWindowHandle, WaylandDisplayHandle, WaylandWindowHandle,
 };
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
-    delegate_compositor, delegate_keyboard, delegate_layer, delegate_output, delegate_pointer,
+    delegate_compositor, delegate_keyboard, delegate_output, delegate_pointer,
     delegate_registry, delegate_seat,
     output::{OutputHandler, OutputState},
     reexports::{
@@ -37,7 +23,7 @@ use smithay_client_toolkit::{
                 wl_surface::WlSurface,
             },
             Connection, Proxy, QueueHandle,
-        },
+        }, protocols::ext::session_lock::v1::client::{ext_session_lock_manager_v1::ExtSessionLockManagerV1, ext_session_lock_surface_v1::{self, ExtSessionLockSurfaceV1}, ext_session_lock_v1::{self, ExtSessionLockV1}},
     },
     registry::{ProvidesRegistryState, RegistryState},
     registry_handlers,
@@ -46,20 +32,14 @@ use smithay_client_toolkit::{
         pointer::{PointerEvent, PointerEventKind, PointerHandler},
         Capability, SeatHandler, SeatState,
     },
-    shell::{
-        wlr_layer::{self, LayerShell, LayerShellHandler, LayerSurface},
-        WaylandSurface,
-    },
 };
-use wayland_client::protocol::wl_display::WlDisplay;
+use wayland_client::{protocol::wl_display::WlDisplay, Dispatch};
 
-pub struct LayerShellSctkWindow {
+pub struct SessionLockSctkWindow {
     window_tx: Sender<WindowMessage>,
-    wl_display: WlDisplay,
     registry_state: RegistryState,
     seat_state: SeatState,
     output_state: OutputState,
-    layer: LayerSurface,
     pub width: u32,
     pub height: u32,
     keyboard: Option<wl_keyboard::WlKeyboard>,
@@ -67,23 +47,20 @@ pub struct LayerShellSctkWindow {
     keyboard_modifiers: Modifiers,
     pointer: Option<wl_pointer::WlPointer>,
     initial_configure_sent: bool,
+    pub wayland_handle: RawWaylandHandle,
     pub scale_factor: f32,
-    exit: bool,
+    wl_display: WlDisplay,
+    wl_surface: WlSurface,
+    // session lock surface
+    // session_lock_manager: ExtSessionLockManagerV1,
+    session_lock: ExtSessionLockV1,
+    // session_lock_surface: ExtSessionLockSurfaceV1,
 }
 
-pub struct LayerOptions {
-    pub anchor: wlr_layer::Anchor,
-    pub layer: wlr_layer::Layer,
-    pub keyboard_interactivity: wlr_layer::KeyboardInteractivity,
-    pub namespace: Option<String>,
-    pub zone: i32,
-}
-
-impl LayerShellSctkWindow {
+impl SessionLockSctkWindow {
     pub fn new(
         window_tx: Sender<WindowMessage>,
         window_opts: WindowOptions,
-        layer_opts: LayerOptions,
     ) -> anyhow::Result<(Self, EventLoop<'static, Self>)> {
         let conn = Connection::connect_to_env().expect("failed to connect to wayland");
         let wl_display = conn.display();
@@ -93,13 +70,6 @@ impl LayerShellSctkWindow {
             width,
             scale_factor,
         } = window_opts;
-        let LayerOptions {
-            anchor,
-            layer,
-            keyboard_interactivity,
-            namespace,
-            zone,
-        } = layer_opts;
 
         let (globals, event_queue) =
             registry_queue_init::<Self>(&conn).context("failed to init registry queue")?;
@@ -111,32 +81,50 @@ impl LayerShellSctkWindow {
             .insert(loop_handle.clone())
             .expect("failed to insert wayland source into event loop");
 
+        let output_state = OutputState::new(&globals, &queue_handle);
         let compositor = CompositorState::bind(&globals, &queue_handle)
             .context("wl_compositor not availible")?;
+        let session_lock_manager = globals
+        .bind::<ExtSessionLockManagerV1, _, _>(
+            &queue_handle,
+            core::ops::RangeInclusive::new(1, 1),
+            (),
+        )
+        .map_err(|_| "compositor does not implement ext session lock manager (v1).")
+        .unwrap();
 
-        let layer_shell =
-            LayerShell::bind(&globals, &queue_handle).context("layer shell not availible")?;
 
-        let surface = compositor.create_surface(&queue_handle);
-        let layer =
-            layer_shell.create_layer_surface(&queue_handle, surface, layer, namespace, None);
+        // create the surfacce
+        let wl_surface = compositor.create_surface(&queue_handle);
 
-        // set layer shell props
-        layer.set_keyboard_interactivity(keyboard_interactivity);
-        layer.set_size(width, height);
-        layer.set_anchor(anchor);
-        layer.set_exclusive_zone(zone);
+        let session_lock = session_lock_manager.lock(&queue_handle, ());
+        let output = output_state.outputs().next().unwrap();
+        // set surface role as session lock surface
+        let _ =
+            session_lock.get_lock_surface(&wl_surface, &output, &queue_handle, ());
 
-        layer.commit();
+        // create wayland handle
+        let wayland_handle = {
+            let mut handle = WaylandDisplayHandle::empty();
+            handle.display = conn.backend().display_ptr() as *mut _;
+            let display_handle = RawDisplayHandle::Wayland(handle);
 
-        let state = LayerShellSctkWindow {
+            let mut handle = WaylandWindowHandle::empty();
+            handle.surface = wl_surface.id().as_ptr() as *mut _;
+            let window_handle = RawWindowHandle::Wayland(handle);
+
+            RawWaylandHandle(display_handle, window_handle)
+        };
+
+
+        let state = SessionLockSctkWindow {
             // app,
             window_tx,
-            wl_display,
             registry_state: RegistryState::new(&globals),
             seat_state: SeatState::new(&globals, &queue_handle),
-            output_state: OutputState::new(&globals, &queue_handle),
-            layer,
+            output_state,
+            wl_display,
+            wl_surface,
             width,
             height,
             keyboard: None,
@@ -144,34 +132,15 @@ impl LayerShellSctkWindow {
             keyboard_modifiers: Modifiers::default(),
             pointer: None,
             initial_configure_sent: false,
+            wayland_handle,
             scale_factor,
-            exit: false,
-            // gl_context,
-            // gl_surface,
-            // gl_canvas,
+            // session_lock_manager: session_lock_manager,
+            session_lock: session_lock,
+            // session_lock_surface: session_lock_surface,
         };
 
         Ok((state, event_loop))
     }
-
-    // pub fn draw(&mut self, queue_handle: &QueueHandle<Self>, surface: &WlSurface) {
-    //     if self.layer.wl_surface() != surface {
-    //         return;
-    //     }
-
-    //     // for continous rendering
-    //     self.send_redraw_requested();
-
-    //     self.layer
-    //         .wl_surface()
-    //         .damage_buffer(0, 0, self.width as i32, self.height as i32);
-
-    //     self.layer
-    //         .wl_surface()
-    //         .frame(queue_handle, self.layer.wl_surface().clone());
-
-    //     self.layer.commit();
-    // }
 
     pub fn send_main_events_cleared(&mut self) {
         let _ = &self.window_tx.send(WindowMessage::MainEventsCleared);
@@ -192,12 +161,12 @@ impl LayerShellSctkWindow {
     }
 
     pub fn send_configure_event(&mut self, width: u32, height: u32) {
-        let wayland_handle = new_raw_wayland_handle(&self.wl_display, &self.layer.wl_surface());
+        let wayland_handle = new_raw_wayland_handle(&self.wl_display, &self.wl_surface);
         let _ = &self.window_tx.send(WindowMessage::Configure { width, height, wayland_handle,  });
     }
 }
 
-impl CompositorHandler for LayerShellSctkWindow {
+impl CompositorHandler for SessionLockSctkWindow {
     fn scale_factor_changed(
         &mut self,
         _conn: &Connection,
@@ -215,7 +184,7 @@ impl CompositorHandler for LayerShellSctkWindow {
         surface: &WlSurface,
         _time: u32,
     ) {
-        if self.layer.wl_surface() != surface {
+        if &self.wl_surface != surface {
             return;
         }
         let _ = self.send_redraw_requested();
@@ -232,7 +201,7 @@ impl CompositorHandler for LayerShellSctkWindow {
     }
 }
 
-impl OutputHandler for LayerShellSctkWindow {
+impl OutputHandler for SessionLockSctkWindow {
     fn output_state(&mut self) -> &mut OutputState {
         &mut self.output_state
     }
@@ -244,34 +213,7 @@ impl OutputHandler for LayerShellSctkWindow {
     fn output_destroyed(&mut self, _: &Connection, _: &QueueHandle<Self>, _: WlOutput) {}
 }
 
-impl LayerShellHandler for LayerShellSctkWindow {
-    fn closed(
-        &mut self,
-        _conn: &Connection,
-        _qh: &QueueHandle<Self>,
-        _layer: &wlr_layer::LayerSurface,
-    ) {
-        let _ = &self.send_close_requested();
-        self.exit = true;
-    }
-
-    fn configure(
-        &mut self,
-        _conn: &Connection,
-        qh: &QueueHandle<Self>,
-        layer: &wlr_layer::LayerSurface,
-        _: wlr_layer::LayerSurfaceConfigure,
-        _serial: u32,
-    ) {
-        // TODO: handle resize?
-        if !self.initial_configure_sent {
-            self.send_configure_event(self.width, self.height);
-            self.initial_configure_sent = true;
-        }
-    }
-}
-
-impl SeatHandler for LayerShellSctkWindow {
+impl SeatHandler for SessionLockSctkWindow {
     fn seat_state(&mut self) -> &mut SeatState {
         &mut self.seat_state
     }
@@ -317,7 +259,7 @@ impl SeatHandler for LayerShellSctkWindow {
     fn remove_seat(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, _seat: WlSeat) {}
 }
 
-impl KeyboardHandler for LayerShellSctkWindow {
+impl KeyboardHandler for SessionLockSctkWindow {
     fn enter(
         &mut self,
         _conn: &Connection,
@@ -328,7 +270,7 @@ impl KeyboardHandler for LayerShellSctkWindow {
         _raw: &[u32],
         _keysyms: &[Keysym],
     ) {
-        if self.layer.wl_surface() != surface {
+        if &self.wl_surface != surface {
             return;
         }
 
@@ -343,7 +285,7 @@ impl KeyboardHandler for LayerShellSctkWindow {
         surface: &WlSurface,
         _serial: u32,
     ) {
-        if self.layer.wl_surface() != surface {
+        if &self.wl_surface != surface {
             return;
         }
 
@@ -361,41 +303,6 @@ impl KeyboardHandler for LayerShellSctkWindow {
         if !self.keyboard_focus {
             return;
         }
-
-        // let Some(keycode) = crate::layer_shell::keyboard::keysym_to_keycode(event.keysym) else {
-        //     return;
-        // };
-
-        // let mut modifiers = keyboard::Modifiers::default();
-
-        // let Modifiers {
-        //     ctrl,
-        //     alt,
-        //     shift,
-        //     caps_lock: _,
-        //     logo,
-        //     num_lock: _,
-        // } = &self.keyboard_modifiers;
-
-        // if *ctrl {
-        //     modifiers |= keyboard::Modifiers::CTRL;
-        // }
-        // if *alt {
-        //     modifiers |= keyboard::Modifiers::ALT;
-        // }
-        // if *shift {
-        //     modifiers |= keyboard::Modifiers::SHIFT;
-        // }
-        // if *logo {
-        //     modifiers |= keyboard::Modifiers::LOGO;
-        // }
-
-        // let event = Event::Keyboard(keyboard::KeyboardEvent::KeyPressed {
-        //     key_code: keycode,
-        //     modifiers,
-        // });
-
-        // let _ = &self.app.push_event(event);
     }
 
     fn release_key(
@@ -409,41 +316,6 @@ impl KeyboardHandler for LayerShellSctkWindow {
         if !self.keyboard_focus {
             return;
         }
-
-        // let Some(keycode) = crate::layer_shell::keyboard::keysym_to_keycode(event.keysym) else {
-        //     return;
-        // };
-
-        // let mut modifiers = keyboard::Modifiers::default();
-
-        // let Modifiers {
-        //     ctrl,
-        //     alt,
-        //     shift,
-        //     caps_lock: _,
-        //     logo,
-        //     num_lock: _,
-        // } = &self.keyboard_modifiers;
-
-        // if *ctrl {
-        //     modifiers |= keyboard::Modifiers::CTRL;
-        // }
-        // if *alt {
-        //     modifiers |= keyboard::Modifiers::ALT;
-        // }
-        // if *shift {
-        //     modifiers |= keyboard::Modifiers::SHIFT;
-        // }
-        // if *logo {
-        //     modifiers |= keyboard::Modifiers::LOGO;
-        // }
-
-        // let event = Event::Keyboard(keyboard::KeyboardEvent::KeyReleased {
-        //     key_code: keycode,
-        //     modifiers,
-        // });
-
-        // let _ = &self.app.push_event(event);
     }
 
     fn update_modifiers(
@@ -458,7 +330,7 @@ impl KeyboardHandler for LayerShellSctkWindow {
     }
 }
 
-impl PointerHandler for LayerShellSctkWindow {
+impl PointerHandler for SessionLockSctkWindow {
     fn pointer_frame(
         &mut self,
         _conn: &Connection,
@@ -467,7 +339,7 @@ impl PointerHandler for LayerShellSctkWindow {
         events: &[PointerEvent],
     ) {
         for event in events {
-            if &event.surface != self.layer.wl_surface() {
+            if &event.surface != &self.wl_surface {
                 continue;
             }
 
@@ -529,7 +401,7 @@ impl PointerHandler for LayerShellSctkWindow {
     }
 }
 
-impl ProvidesRegistryState for LayerShellSctkWindow {
+impl ProvidesRegistryState for SessionLockSctkWindow {
     fn registry(&mut self) -> &mut RegistryState {
         &mut self.registry_state
     }
@@ -537,10 +409,68 @@ impl ProvidesRegistryState for LayerShellSctkWindow {
     registry_handlers!(OutputState, SeatState);
 }
 
-delegate_compositor!(LayerShellSctkWindow);
-delegate_output!(LayerShellSctkWindow);
-delegate_seat!(LayerShellSctkWindow);
-delegate_keyboard!(LayerShellSctkWindow);
-delegate_pointer!(LayerShellSctkWindow);
-delegate_layer!(LayerShellSctkWindow);
-delegate_registry!(LayerShellSctkWindow);
+delegate_compositor!(SessionLockSctkWindow);
+delegate_output!(SessionLockSctkWindow);
+delegate_seat!(SessionLockSctkWindow);
+delegate_keyboard!(SessionLockSctkWindow);
+delegate_pointer!(SessionLockSctkWindow);
+delegate_registry!(SessionLockSctkWindow);
+
+/* Session Lock binds */
+impl Dispatch<ExtSessionLockManagerV1, ()> for SessionLockSctkWindow {
+    fn event(
+        _: &mut Self,
+        _: &ExtSessionLockManagerV1,
+        event: <ExtSessionLockManagerV1 as Proxy>::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+        println!("event::ext_session_lock_manager_v1 {:?}", event);
+    }
+}
+
+impl Dispatch<ExtSessionLockV1, ()> for SessionLockSctkWindow {
+    fn event(
+        state: &mut Self,
+        _: &ExtSessionLockV1,
+        event: <ExtSessionLockV1 as Proxy>::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+        match event {
+            ext_session_lock_v1::Event::Locked => {
+            }
+            ext_session_lock_v1::Event::Finished => {
+            }
+            _ => {}
+        }
+    }
+}
+
+impl Dispatch<ExtSessionLockSurfaceV1, ()> for SessionLockSctkWindow {
+    fn event(
+        state: &mut Self,
+        surface: &ExtSessionLockSurfaceV1,
+        event: <ExtSessionLockSurfaceV1 as Proxy>::Event,
+        _: &(),
+        _: &Connection,
+        qh: &QueueHandle<Self>,
+    ) {
+        match event {
+            ext_session_lock_surface_v1::Event::Configure {
+                serial,
+                width,
+                height,
+            } => {
+                if !state.initial_configure_sent {
+                    state.send_configure_event(width, height);
+                    state.initial_configure_sent = true;
+                    surface.ack_configure(serial);
+                }
+            }
+            _ => todo!(),
+        }
+    }
+}
