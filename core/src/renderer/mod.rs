@@ -1,8 +1,7 @@
 use std::{fmt, sync::{Arc, RwLock}};
+use raw_window_handle::{RawDisplayHandle, RawWindowHandle};
 
-use crate::{font_cache::FontCache, node::Node, types::PixelSize, window::Window};
-
-use self::canvas::CanvasContext;
+use crate::{font_cache::FontCache, window::Window, Node, PixelSize};
 
 pub mod canvas;
 
@@ -23,7 +22,8 @@ pub struct Caches {
 }
 
 pub(crate) trait Renderer: fmt::Debug + std::marker::Sized + Send + Sync {
-    fn new<W: Window>(window: &W) -> Self;
+    fn new<W: Window>(window: Arc<RwLock<W>>) -> Self;
+    fn configure<W: crate::window::Window>(&mut self, window: Arc<RwLock<W>>) {}
     fn render(&mut self, _node: &Node, _physical_size: PixelSize) {}
     /// This default is provided for tests, it should be overridden
     fn caches(&self) -> Caches {

@@ -1,4 +1,4 @@
-use crate::types::{Data, PixelSize};
+use crate::{raw_handle::RawWaylandHandle, types::{Data, PixelSize}};
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
 use std::{any::Any, collections::HashMap};
 
@@ -60,4 +60,14 @@ pub trait Window: HasRawWindowHandle + HasRawDisplayHandle + Send + Sync + Any {
 
     // For svgs
     fn svgs(&self) -> HashMap<String, String>;
+
+    // used to reconfigure size
+    fn set_size(&mut self, width: u32, height: u32) {}
+
+    // used to reconfigure wayland_handle
+    fn set_wayland_handle(&mut self, wayland_handle: RawWaylandHandle) {}
+
+    fn has_handle(&self) -> bool {
+        true
+    }
 }

@@ -1,0 +1,846 @@
+warning: /home/parallels/repos/mctk/Cargo.toml: unused manifest key: workspace.package.name
+warning: unused import: `crate::renderables::types::Canvas`
+ --> core/src/component.rs:8:5
+  |
+8 | use crate::renderables::types::Canvas;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `crate::style::HorizontalPosition`
+ --> core/src/font_cache.rs:4:5
+  |
+4 | use crate::style::HorizontalPosition;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `femtovg::Align`
+ --> core/src/font_cache.rs:5:5
+  |
+5 | use femtovg::Align;
+  |     ^^^^^^^^^^^^^^
+
+warning: unused import: `super::types`
+ --> core/src/renderables/circle.rs:3:5
+  |
+3 | use super::types;
+  |     ^^^^^^^^^^^^
+
+warning: unused imports: `Paint`, `Path`
+ --> core/src/renderables/image.rs:8:24
+  |
+8 | use femtovg::{ImageId, Paint, Path};
+  |                        ^^^^^  ^^^^
+
+warning: unused import: `super::types`
+ --> core/src/renderables/line.rs:3:5
+  |
+3 | use super::types;
+  |     ^^^^^^^^^^^^
+
+warning: unused imports: `Corners`, `self`
+ --> core/src/renderables/rect.rs:2:20
+  |
+2 | use super::types::{self, Corners, Edges};
+  |                    ^^^^  ^^^^^^^
+
+warning: unused import: `AABB`
+ --> core/src/renderables/rect.rs:3:46
+  |
+3 | use crate::types::{Color, Point, Pos, Scale, AABB};
+  |                                              ^^^^
+
+warning: unused imports: `Pod`, `Zeroable`
+ --> core/src/renderables/rect.rs:4:16
+  |
+4 | use bytemuck::{Pod, Zeroable};
+  |                ^^^  ^^^^^^^^
+
+warning: unused import: `Color as fem_color`
+ --> core/src/renderables/rect.rs:6:15
+  |
+6 | use femtovg::{Color as fem_color, ImageId, Paint, Path};
+  |               ^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Color`, `ImageId`, `Paint`, `Path`
+ --> core/src/renderables/svg.rs:8:15
+  |
+8 | use femtovg::{Color, ImageId, Paint, Path};
+  |               ^^^^^  ^^^^^^^  ^^^^^  ^^^^
+
+warning: unused import: `super::types`
+ --> core/src/renderables/text.rs:3:5
+  |
+3 | use super::types;
+  |     ^^^^^^^^^^^^
+
+warning: unused imports: `AABB`, `Point`, `Scale`
+ --> core/src/renderables/text.rs:5:27
+  |
+5 | use crate::types::{Color, Point, Pos, Scale, AABB};
+  |                           ^^^^^       ^^^^^  ^^^^
+
+warning: unused imports: `Color as fem_color`, `Path`
+ --> core/src/renderables/text.rs:7:32
+  |
+7 | use femtovg::{Align, Baseline, Color as fem_color, FontId, Paint, Path};
+  |                                ^^^^^^^^^^^^^^^^^^                 ^^^^
+
+warning: unused import: `resource::resource`
+ --> core/src/renderables/text.rs:8:5
+  |
+8 | use resource::resource;
+  |     ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `sync::mpsc::Sender`
+ --> core/src/renderables/types.rs:5:5
+  |
+5 |     sync::mpsc::Sender,
+  |     ^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Paint`, `Path`
+  --> core/src/renderables/mod.rs:20:32
+   |
+20 | use femtovg::{FontId, ImageId, Paint, Path};
+   |                                ^^^^^  ^^^^
+
+warning: unused import: `NotCurrentContext`
+ --> core/src/renderer/canvas.rs:4:33
+  |
+4 | use glutin::api::egl::context::{NotCurrentContext, PossiblyCurrentContext};
+  |                                 ^^^^^^^^^^^^^^^^^
+
+warning: unused import: `PossiblyCurrentGlContext`
+ --> core/src/renderer/canvas.rs:9:46
+  |
+9 |     PossiblyCurrentContextGlSurfaceAccessor, PossiblyCurrentGlContext,
+  |                                              ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `resource::resource`
+  --> core/src/renderer/canvas.rs:14:5
+   |
+14 | use resource::resource;
+   |     ^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Arc`, `RwLock`
+  --> core/src/renderer/canvas.rs:17:17
+   |
+17 | use std::sync::{Arc, RwLock};
+   |                 ^^^  ^^^^^^
+
+warning: unused import: `path`
+  --> core/src/renderer/canvas.rs:18:16
+   |
+18 | use std::{fmt, path};
+   |                ^^^^
+
+warning: unused import: `usvg::fontdb::Database`
+  --> core/src/renderer/canvas.rs:19:5
+   |
+19 | use usvg::fontdb::Database;
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `canvas::CanvasContext`
+  --> core/src/ui.rs:10:16
+   |
+10 |     renderer::{canvas::CanvasContext, Renderer},
+   |                ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Point`, `Size`
+ --> core/src/widgets/rounded_rect.rs:4:33
+  |
+4 | use crate::renderables::types::{Point, Size};
+  |                                 ^^^^^  ^^^^
+
+warning: unused imports: `Point`, `Size`
+ --> core/src/widgets/image.rs:5:33
+  |
+5 | use crate::renderables::types::{Point, Size};
+  |                                 ^^^^^  ^^^^
+
+warning: unused import: `Rect`
+ --> core/src/widgets/image.rs:6:32
+  |
+6 | use crate::renderables::{self, Rect, Renderable};
+  |                                ^^^^
+
+warning: unused imports: `Point`, `Size`
+ --> core/src/widgets/svg.rs:5:33
+  |
+5 | use crate::renderables::types::{Point, Size};
+  |                                 ^^^^^  ^^^^
+
+warning: unused import: `Rect`
+ --> core/src/widgets/svg.rs:6:32
+  |
+6 | use crate::renderables::{self, Rect, Renderable};
+  |                                ^^^^
+
+warning: unused imports: `Point`, `Size`
+ --> core/src/widgets/slider.rs:6:33
+  |
+6 | use crate::renderables::types::{Point, Size};
+  |                                 ^^^^^  ^^^^
+
+warning: unused import: `size`
+  --> core/src/widgets/slider.rs:12:29
+   |
+12 | use crate::{lay, msg, node, size, size_pct, types::*, Node};
+   |                             ^^^^
+
+warning: unused import: `Add`
+ --> core/src/renderables/types.rs:4:11
+  |
+4 |     ops::{Add, Div, Mul, MulAssign, Sub},
+  |           ^^^
+
+warning: unused import: `Sub`
+ --> core/src/renderables/types.rs:4:37
+  |
+4 |     ops::{Add, Div, Mul, MulAssign, Sub},
+  |                                     ^^^
+
+warning: unused import: `Div`
+ --> core/src/renderables/types.rs:4:16
+  |
+4 |     ops::{Add, Div, Mul, MulAssign, Sub},
+  |                ^^^
+
+warning: unused import: `PossiblyCurrentContextGlSurfaceAccessor`
+ --> core/src/renderer/canvas.rs:9:5
+  |
+9 |     PossiblyCurrentContextGlSurfaceAccessor, PossiblyCurrentGlContext,
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `pos`
+  --> core/src/renderables/image.rs:37:24
+   |
+37 |         let Instance { pos, scale, .. } = self.instance_data;
+   |                        ^^^-
+   |                        |
+   |                        help: try removing the field
+   |
+   = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `scale`
+  --> core/src/renderables/image.rs:37:29
+   |
+37 |         let Instance { pos, scale, .. } = self.instance_data;
+   |                             ^^^^^-
+   |                             |
+   |                             help: try removing the field
+
+warning: unused variable: `canvas`
+  --> core/src/renderables/image.rs:36:26
+   |
+36 |     pub fn render(&self, canvas: &mut Canvas, assets: &HashMap<String, ImageId>) {
+   |                          ^^^^^^ help: if this is intentional, prefix it with an underscore: `_canvas`
+
+warning: unused variable: `assets`
+  --> core/src/renderables/image.rs:36:47
+   |
+36 |     pub fn render(&self, canvas: &mut Canvas, assets: &HashMap<String, ImageId>) {
+   |                                               ^^^^^^ help: if this is intentional, prefix it with an underscore: `_assets`
+
+warning: unused variable: `gradient`
+  --> core/src/renderables/rect.rs:74:13
+   |
+74 |             gradient,
+   |             ^^^^^^^^ help: try ignoring the field: `gradient: _`
+
+warning: unused variable: `z`
+  --> core/src/renderables/svg.rs:41:25
+   |
+41 |         let Pos { x, y, z } = pos;
+   |                         ^ help: try ignoring the field: `z: _`
+
+warning: unused variable: `fraction`
+    --> core/src/renderables/types.rs:1321:38
+     |
+1321 |             DefiniteLength::Fraction(fraction) => 0.0.into(),
+     |                                      ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_fraction`
+
+warning: unused variable: `aabb`
+   --> core/src/renderer/canvas.rs:210:26
+    |
+210 |         for (renderable, aabb, frame) in node.iter_renderables() {
+    |                          ^^^^ help: if this is intentional, prefix it with an underscore: `_aabb`
+
+warning: unused variable: `frame`
+   --> core/src/renderer/canvas.rs:210:32
+    |
+210 |         for (renderable, aabb, frame) in node.iter_renderables() {
+    |                                ^^^^^ help: if this is intentional, prefix it with an underscore: `_frame`
+
+warning: unused variable: `name`
+   --> core/src/ui.rs:701:32
+    |
+701 |     pub fn add_font(&mut self, name: String, bytes: &'static [u8]) {
+    |                                ^^^^ help: if this is intentional, prefix it with an underscore: `_name`
+
+warning: unused variable: `bytes`
+   --> core/src/ui.rs:701:46
+    |
+701 |     pub fn add_font(&mut self, name: String, bytes: &'static [u8]) {
+    |                                              ^^^^^ help: if this is intentional, prefix it with an underscore: `_bytes`
+
+warning: variable does not need to be mutable
+  --> core/src/widgets/button.rs:70:13
+   |
+70 |         let mut base = node!(
+   |             ----^^^^
+   |             |
+   |             help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` on by default
+
+warning: unused variable: `event`
+   --> core/src/widgets/button.rs:132:27
+    |
+132 |     fn on_tick(&mut self, event: &mut event::Event<event::Tick>) {
+    |                           ^^^^^ help: if this is intentional, prefix it with an underscore: `_event`
+
+warning: unused variable: `height`
+  --> core/src/widgets/text.rs:65:9
+   |
+65 |         height: Option<f32>,
+   |         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_height`
+
+warning: unused variable: `max_width`
+  --> core/src/widgets/text.rs:66:9
+   |
+66 |         max_width: Option<f32>,
+   |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_max_width`
+
+warning: unused variable: `max_height`
+  --> core/src/widgets/text.rs:67:9
+   |
+67 |         max_height: Option<f32>,
+   |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_max_height`
+
+warning: unused variable: `font_cache`
+  --> core/src/widgets/text.rs:68:9
+   |
+68 |         font_cache: &FontCache,
+   |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_font_cache`
+
+warning: unused variable: `scale`
+  --> core/src/widgets/text.rs:69:9
+   |
+69 |         scale: f32,
+   |         ^^^^^ help: if this is intentional, prefix it with an underscore: `_scale`
+
+warning: unused variable: `event`
+   --> core/src/widgets/slider.rs:310:31
+    |
+310 |     fn on_drag_end(&mut self, event: &mut Event<event::DragEnd>) {
+    |                               ^^^^^ help: if this is intentional, prefix it with an underscore: `_event`
+
+warning: field `font_names` is never read
+  --> core/src/font_cache.rs:13:16
+   |
+11 | pub struct FontCache {
+   |            --------- field in this struct
+12 |     // pub(crate) fonts: Fonts,
+13 |     pub(crate) font_names: HashMap<String, usize>,
+   |                ^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: type alias `Point` is never used
+  --> core/src/renderables/image.rs:10:6
+   |
+10 | type Point = types::Point<f32>;
+   |      ^^^^^
+
+warning: type alias `Size` is never used
+  --> core/src/renderables/image.rs:11:6
+   |
+11 | type Size = types::Size<f32>;
+   |      ^^^^
+
+warning: type alias `Point` is never used
+  --> core/src/renderables/svg.rs:10:6
+   |
+10 | type Point = types::Point<f32>;
+   |      ^^^^^
+
+warning: type alias `Size` is never used
+  --> core/src/renderables/svg.rs:11:6
+   |
+11 | type Size = types::Size<f32>;
+   |      ^^^^
+
+warning: field `tool_tip_open` is never read
+  --> core/src/widgets/button.rs:16:5
+   |
+13 | struct ButtonState {
+   |        ----------- field in this struct
+...
+16 |     tool_tip_open: Option<Point>,
+   |     ^^^^^^^^^^^^^
+   |
+   = note: `ButtonState` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: fields `width`, `height`, `max_width`, `max_height`, and `output` are never read
+  --> core/src/widgets/text.rs:14:5
+   |
+13 | struct BoundsCache {
+   |        ----------- fields in this struct
+14 |     width: Option<f32>,
+   |     ^^^^^
+15 |     height: Option<f32>,
+   |     ^^^^^^
+16 |     max_width: Option<f32>,
+   |     ^^^^^^^^^
+17 |     max_height: Option<f32>,
+   |     ^^^^^^^^^^
+18 |     output: Option<(Option<f32>, Option<f32>)>,
+   |     ^^^^^^
+   |
+   = note: `BoundsCache` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: field `bounds_cache` is never read
+  --> core/src/widgets/text.rs:23:5
+   |
+22 | pub struct TextState {
+   |            --------- field in this struct
+23 |     bounds_cache: BoundsCache,
+   |     ^^^^^^^^^^^^
+   |
+   = note: `TextState` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: methods `normalize`, `width`, `height`, `size`, and `area` are never used
+   --> core/src/types.rs:408:12
+    |
+407 | impl PixelAABB {
+    | -------------- methods in this implementation
+408 |     pub fn normalize(&self, scale: PixelSize) -> (Point, Point) {
+    |            ^^^^^^^^^
+...
+421 |     pub fn width(&self) -> u32 {
+    |            ^^^^^
+...
+425 |     pub fn height(&self) -> u32 {
+    |            ^^^^^^
+...
+429 |     pub fn size(&self) -> PixelSize {
+    |            ^^^^
+...
+436 |     pub fn area(&self) -> u32 {
+    |            ^^^^
+
+warning: `mctk_core` (lib) generated 63 warnings (run `cargo fix --lib -p mctk_core` to apply 50 suggestions)
+   Compiling mctk_smithay v0.1.0 (/home/parallels/repos/mctk/backends/smithay)
+warning: unused import: `std::num::NonZeroU32`
+ --> backends/smithay/src/lock_surface.rs:1:5
+  |
+1 | use std::num::NonZeroU32;
+  |     ^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused imports: `HasRawDisplayHandle`, `HasRawWindowHandle`
+ --> backends/smithay/src/lock_surface.rs:9:5
+  |
+9 |     HasRawDisplayHandle, HasRawWindowHandle, RawDisplayHandle, RawWindowHandle, WaylandDisplayHandle, WaylandWindowHandle
+  |     ^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `glutin::api::egl`
+  --> backends/smithay/src/lock_surface.rs:11:5
+   |
+11 | use glutin::api::egl;
+   |     ^^^^^^^^^^^^^^^^
+
+warning: unused import: `NotCurrentContext`
+  --> backends/smithay/src/lock_surface.rs:12:33
+   |
+12 | use glutin::api::egl::context::{NotCurrentContext, PossiblyCurrentContext};
+   |                                 ^^^^^^^^^^^^^^^^^
+
+warning: unused import: `glutin::config::GlConfig`
+  --> backends/smithay/src/lock_surface.rs:14:5
+   |
+14 | use glutin::config::GlConfig;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `ContextAttributesBuilder`, `NotCurrentGlContextSurfaceAccessor`, `PossiblyCurrentContextGlSurfaceAccessor`, `PossiblyCurrentGlContext`
+  --> backends/smithay/src/lock_surface.rs:16:5
+   |
+16 |     ContextAttributesBuilder, NotCurrentGlContextSurfaceAccessor,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+17 |     PossiblyCurrentContextGlSurfaceAccessor, PossiblyCurrentGlContext,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `glutin::display::GlDisplay`
+  --> backends/smithay/src/lock_surface.rs:19:5
+   |
+19 | use glutin::display::GlDisplay;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `SurfaceAttributesBuilder`
+  --> backends/smithay/src/lock_surface.rs:20:34
+   |
+20 | use glutin::surface::{GlSurface, SurfaceAttributesBuilder, WindowSurface};
+   |                                  ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `api::egl::display::Display`, `config::ConfigTemplateBuilder`
+  --> backends/smithay/src/lock_surface.rs:21:14
+   |
+21 | use glutin::{api::egl::display::Display, config::ConfigTemplateBuilder};
+   |              ^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `ShmHandler`, `Shm`, `delegate_layer`, `delegate_shm`, `raw::RawPool`
+  --> backends/smithay/src/lock_surface.rs:23:95
+   |
+23 | ...board, delegate_layer, delegate_output, delegate_pointer, delegate_registry, delegate_seat, delegate_session_lock, delegate_shm, outpu...
+   |           ^^^^^^^^^^^^^^                                                                                              ^^^^^^^^^^^^
+...
+41 | ...face, SessionLockSurfaceConfigure}, shm::{raw::RawPool, Shm, ShmHandler}
+   |                                              ^^^^^^^^^^^^  ^^^  ^^^^^^^^^^
+
+warning: unused imports: `wl_buffer`, `wl_shm`
+  --> backends/smithay/src/lock_surface.rs:43:32
+   |
+43 | use wayland_client::protocol::{wl_buffer, wl_shm};
+   |                                ^^^^^^^^^  ^^^^^^
+
+warning: unused imports: `LayerApp`, `LayerOptions`
+ --> backends/smithay/src/lock_window.rs:2:13
+  |
+2 | use layer::{LayerApp, LayerOptions};
+  |             ^^^^^^^^  ^^^^^^^^^^^^
+
+warning: unused imports: `Button`, `Input`, `Motion`, `MouseButton`
+ --> backends/smithay/src/lock_window.rs:4:24
+  |
+4 | use mctk_core::input::{Button, Input, Motion, MouseButton};
+  |                        ^^^^^^  ^^^^^  ^^^^^^  ^^^^^^^^^^^
+
+warning: unused imports: `MouseEvent`, `ScrollDelta`
+ --> backends/smithay/src/lock_window.rs:8:15
+  |
+8 | use pointer::{MouseEvent, ScrollDelta};
+  |               ^^^^^^^^^^  ^^^^^^^^^^^
+
+warning: unused imports: `Arc`, `RwLock`
+ --> backends/smithay/src/gl.rs:2:17
+  |
+2 | use std::sync::{Arc, RwLock};
+  |                 ^^^  ^^^^^^
+
+warning: unused import: `Color`
+  --> backends/smithay/src/gl.rs:12:41
+   |
+12 | use femtovg::{renderer::OpenGl, Canvas, Color, Renderer};
+   |                                         ^^^^^
+
+warning: unused import: `GlSurface`
+  --> backends/smithay/src/lock_surface.rs:20:23
+   |
+20 | use glutin::surface::{GlSurface, SurfaceAttributesBuilder, WindowSurface};
+   |                       ^^^^^^^^^
+
+warning: unused import: `Renderer`
+  --> backends/smithay/src/gl.rs:12:48
+   |
+12 | use femtovg::{renderer::OpenGl, Canvas, Color, Renderer};
+   |                                                ^^^^^^^^
+
+warning: unused variable: `event`
+   --> backends/smithay/src/layer.rs:346:9
+    |
+346 |         event: KeyEvent,
+    |         ^^^^^ help: if this is intentional, prefix it with an underscore: `_event`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `event`
+   --> backends/smithay/src/layer.rs:394:9
+    |
+394 |         event: KeyEvent,
+    |         ^^^^^ help: if this is intentional, prefix it with an underscore: `_event`
+
+warning: variable does not need to be mutable
+   --> backends/smithay/src/lock_surface.rs:123:13
+    |
+123 |         let mut state = LockSurfaceApp {
+    |             ----^^^^^
+    |             |
+    |             help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` on by default
+
+warning: unused variable: `surface`
+   --> backends/smithay/src/lock_surface.rs:312:9
+    |
+312 |         surface: &WlSurface,
+    |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_surface`
+
+warning: unused variable: `surface`
+   --> backends/smithay/src/lock_surface.rs:329:9
+    |
+329 |         surface: &WlSurface,
+    |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_surface`
+
+warning: unused variable: `event`
+   --> backends/smithay/src/lock_surface.rs:345:9
+    |
+345 |         event: KeyEvent,
+    |         ^^^^^ help: if this is intentional, prefix it with an underscore: `_event`
+
+warning: unused variable: `event`
+   --> backends/smithay/src/lock_surface.rs:393:9
+    |
+393 |         event: KeyEvent,
+    |         ^^^^^ help: if this is intentional, prefix it with an underscore: `_event`
+
+warning: unused variable: `width`
+   --> backends/smithay/src/lock_surface.rs:529:13
+    |
+529 |         let width = self.width;
+    |             ^^^^^ help: if this is intentional, prefix it with an underscore: `_width`
+
+warning: unused variable: `height`
+   --> backends/smithay/src/lock_surface.rs:530:13
+    |
+530 |         let height = self.height;
+    |             ^^^^^^ help: if this is intentional, prefix it with an underscore: `_height`
+
+warning: unused variable: `session_lock_surface`
+   --> backends/smithay/src/lock_surface.rs:553:9
+    |
+553 |         session_lock_surface: SessionLockSurface,
+    |         ^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_session_lock_surface`
+
+warning: unused variable: `fonts`
+  --> backends/smithay/src/lock_window.rs:66:13
+   |
+66 |             fonts,
+   |             ^^^^^ help: try ignoring the field: `fonts: _`
+
+warning: unused variable: `assets`
+  --> backends/smithay/src/lock_window.rs:67:13
+   |
+67 |             assets,
+   |             ^^^^^^ help: try ignoring the field: `assets: _`
+
+warning: unused variable: `svgs`
+  --> backends/smithay/src/lock_window.rs:68:13
+   |
+68 |             svgs,
+   |             ^^^^ help: try ignoring the field: `svgs: _`
+
+warning: unused variable: `window_tx_clone`
+  --> backends/smithay/src/lock_window.rs:77:13
+   |
+77 |         let window_tx_clone = window_tx.clone();
+   |             ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_window_tx_clone`
+
+warning: unused variable: `app_ui`
+  --> backends/smithay/src/lock_window.rs:79:17
+   |
+79 |         let mut app_ui: Option<UI<LockWindow, A>> = None;
+   |                 ^^^^^^ help: if this is intentional, prefix it with an underscore: `_app_ui`
+
+warning: unused variable: `wayland_handle`
+  --> backends/smithay/src/lock_window.rs:89:57
+   |
+89 | ...                   LockWindowMessage::Locked { wayland_handle }=> {
+   |                                                   ^^^^^^^^^^^^^^ help: try ignoring the field: `wayland_handle: _`
+
+warning: unused variable: `message`
+   --> backends/smithay/src/lock_window.rs:107:55
+    |
+107 | ...                   LockWindowMessage::Send { message } => {
+    |                                                 ^^^^^^^ help: try ignoring the field: `message: _`
+
+warning: unused variable: `app_window`
+  --> backends/smithay/src/lock_window.rs:85:57
+   |
+85 |             move |ev: Event<LockWindowMessage>, &mut _, app_window| {
+   |                                                         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_app_window`
+
+warning: variable does not need to be mutable
+  --> backends/smithay/src/lock_window.rs:79:13
+   |
+79 |         let mut app_ui: Option<UI<LockWindow, A>> = None;
+   |             ----^^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: unused variable: `scale_factor`
+  --> backends/smithay/src/gl.rs:61:74
+   |
+61 | pub fn init_gl_canvas(gl_display: &Display, (width, height): (u32, u32), scale_factor: f32) -> Canvas<OpenGl>  {
+   |                                                                          ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_scale_factor`
+
+warning: unused variable: `title`
+  --> backends/smithay/src/lib.rs:79:13
+   |
+79 |             title,
+   |             ^^^^^ help: try ignoring the field: `title: _`
+
+warning: unused variable: `namespace`
+  --> backends/smithay/src/lib.rs:80:13
+   |
+80 |             namespace,
+   |             ^^^^^^^^^ help: try ignoring the field: `namespace: _`
+
+warning: unused variable: `app_window`
+   --> backends/smithay/src/lib.rs:111:53
+    |
+111 |             move |ev: Event<WindowMessage>, &mut _, app_window| {
+    |                                                     ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_app_window`
+
+warning: fields `session_lock_state` and `session_lock` are never read
+  --> backends/smithay/src/lock_surface.rs:61:5
+   |
+45 | pub struct LockSurfaceApp {
+   |            -------------- fields in this struct
+...
+61 |     session_lock_state: SessionLockState,
+   |     ^^^^^^^^^^^^^^^^^^
+62 |     session_lock: Option<SessionLock>,
+   |     ^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: variants `Available` and `Unavailable` are never constructed
+  --> backends/smithay/src/pointer.rs:32:5
+   |
+31 | pub enum Cursor {
+   |          ------ variants in this enum
+32 |     Available { position: Point },
+   |     ^^^^^^^^^
+33 |     Unavailable,
+   |     ^^^^^^^^^^^
+   |
+   = note: `Cursor` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: `mctk_smithay` (lib) generated 43 warnings (run `cargo fix --lib -p mctk_smithay` to apply 39 suggestions)
+   Compiling lock-screen v0.1.0 (/home/parallels/repos/mctk/examples/lock-screen)
+warning: unused import: `std::time::Duration`
+ --> examples/lock-screen/src/main.rs:2:5
+  |
+2 | use std::time::Duration;
+  |     ^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unreachable expression
+   --> examples/lock-screen/src/main.rs:132:5
+    |
+126 | /     loop {
+127 | |         event_loop
+128 | |             .dispatch(None, &mut app)
+129 | |             .unwrap();
+130 | |     }
+    | |_____- any code following this expression is unreachable
+131 |
+132 |       Ok(())
+    |       ^^^^^^ unreachable expression
+    |
+    = note: `#[warn(unreachable_code)]` on by default
+
+warning: unused variable: `context`
+  --> examples/lock-screen/src/main.rs:41:26
+   |
+41 |     fn render(&mut self, context: RenderContext) -> Option<Vec<Renderable>> {
+   |                          ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_context`
+   |
+   = note: `#[warn(unused_variables)]` on by default
+
+warning: type alias `Point` is never used
+  --> examples/lock-screen/src/main.rs:15:6
+   |
+15 | type Point = types::Point<f32>;
+   |      ^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: `lock-screen` (bin "lock-screen") generated 4 warnings (run `cargo fix --bin "lock-screen"` to apply 2 suggestions)
+    Finished dev [unoptimized + debuginfo] target(s) in 11.42s
+     Running `/home/parallels/repos/mctk/target/debug/lock-screen`
+[1821988.305]  -> wl_display@1.get_registry(new id wl_registry@2)
+[1821988.350]  -> wl_display@1.sync(new id wl_callback@3)
+[1821989.011] wl_display@1.delete_id(3)
+[1821989.026] wl_registry@2.global(1, "wl_shm", 1)
+[1821989.073] wl_registry@2.global(2, "wl_drm", 2)
+[1821989.090] wl_registry@2.global(3, "zwp_linux_dmabuf_v1", 4)
+[1821989.095] wl_registry@2.global(4, "wl_compositor", 5)
+[1821989.099] wl_registry@2.global(5, "wl_subcompositor", 1)
+[1821989.104] wl_registry@2.global(6, "wl_data_device_manager", 3)
+[1821989.108] wl_registry@2.global(7, "zwlr_gamma_control_manager_v1", 1)
+[1821989.111] wl_registry@2.global(8, "zxdg_output_manager_v1", 3)
+[1821989.115] wl_registry@2.global(9, "org_kde_kwin_idle", 1)
+[1821989.120] wl_registry@2.global(10, "ext_idle_notifier_v1", 1)
+[1821989.124] wl_registry@2.global(11, "zwp_idle_inhibit_manager_v1", 1)
+[1821989.128] wl_registry@2.global(12, "zwlr_layer_shell_v1", 4)
+[1821989.132] wl_registry@2.global(13, "xdg_wm_base", 2)
+[1821989.136] wl_registry@2.global(14, "zwp_tablet_manager_v2", 1)
+[1821989.140] wl_registry@2.global(15, "org_kde_kwin_server_decoration_manager", 1)
+[1821989.144] wl_registry@2.global(16, "zxdg_decoration_manager_v1", 1)
+[1821989.149] wl_registry@2.global(17, "zwp_relative_pointer_manager_v1", 1)
+[1821989.153] wl_registry@2.global(18, "zwp_pointer_constraints_v1", 1)
+[1821989.157] wl_registry@2.global(19, "wp_presentation", 1)
+[1821989.160] wl_registry@2.global(20, "zwlr_output_manager_v1", 4)
+[1821989.164] wl_registry@2.global(21, "zwlr_output_power_manager_v1", 1)
+[1821989.168] wl_registry@2.global(22, "zwp_input_method_manager_v2", 1)
+[1821989.172] wl_registry@2.global(23, "zwp_text_input_manager_v3", 1)
+[1821989.176] wl_registry@2.global(24, "zwlr_foreign_toplevel_manager_v1", 3)
+[1821989.180] wl_registry@2.global(25, "ext_session_lock_manager_v1", 1)
+[1821989.184] wl_registry@2.global(26, "zwlr_export_dmabuf_manager_v1", 1)
+[1821989.188] wl_registry@2.global(27, "zwlr_screencopy_manager_v1", 3)
+[1821989.192] wl_registry@2.global(28, "zwlr_data_control_manager_v1", 2)
+[1821989.196] wl_registry@2.global(29, "zwp_primary_selection_device_manager_v1", 1)
+[1821989.200] wl_registry@2.global(30, "wp_viewporter", 1)
+[1821989.204] wl_registry@2.global(31, "wp_single_pixel_buffer_manager_v1", 1)
+[1821989.208] wl_registry@2.global(32, "zxdg_exporter_v1", 1)
+[1821989.212] wl_registry@2.global(33, "zxdg_importer_v1", 1)
+[1821989.223] wl_registry@2.global(34, "zxdg_exporter_v2", 1)
+[1821989.227] wl_registry@2.global(35, "zxdg_importer_v2", 1)
+[1821989.230] wl_registry@2.global(36, "xdg_activation_v1", 1)
+[1821989.234] wl_registry@2.global(37, "zwp_virtual_keyboard_manager_v1", 1)
+[1821989.238] wl_registry@2.global(38, "zwlr_virtual_pointer_manager_v1", 2)
+[1821989.242] wl_registry@2.global(39, "zwlr_input_inhibit_manager_v1", 1)
+[1821989.245] wl_registry@2.global(40, "zwp_keyboard_shortcuts_inhibit_manager_v1", 1)
+[1821989.249] wl_registry@2.global(41, "wl_seat", 8)
+[1821989.253] wl_registry@2.global(42, "zwp_pointer_gestures_v1", 3)
+[1821989.256] wl_registry@2.global(43, "wl_output", 4)
+[1821989.260] wl_callback@3.done(4)
+[1821989.313]  -> wl_registry@2.bind(4, "wl_compositor", 5, new id [unknown]@3)
+[1821989.334]  -> wl_registry@2.bind(43, "wl_output", 4, new id [unknown]@4)
+[2m2024-03-16T22:12:46.444036Z[0m [34mDEBUG[0m [2msctk[0m[2m:[0m Bound new global [43] wl_output v4    
+[1821989.442]  -> wl_registry@2.bind(8, "zxdg_output_manager_v1", 3, new id [unknown]@5)
+[2m2024-03-16T22:12:46.444106Z[0m [34mDEBUG[0m [2msctk[0m[2m:[0m Bound new global [8] zxdg_output_manager_v1 v3    
+[1821989.466]  -> zxdg_output_manager_v1@5.get_xdg_output(new id zxdg_output_v1@6, wl_output@4)
+[1821989.476]  -> wl_registry@2.bind(25, "ext_session_lock_manager_v1", 1, new id [unknown]@7)
+[1821989.516]  -> ext_session_lock_manager_v1@7.lock(new id ext_session_lock_v1@8)
+[1821989.528]  -> wl_registry@2.bind(41, "wl_seat", 7, new id [unknown]@9)
+[2m2024-03-16T22:12:46.444192Z[0m [34mDEBUG[0m [2msctk[0m[2m:[0m Bound new global [41] wl_seat v7    
+[1821990.890] wl_output@4.geometry(0, 0, 0, 0, 0, "Unknown", "Unknown", 0)
+[1821990.927] wl_output@4.mode(1, 480, 480, 0)
+[1821990.932] wl_output@4.scale(1)
+[1821990.934] wl_output@4.name("WL-1")
+[1821990.936] wl_output@4.description("Wayland output 1")
+[1821990.940] wl_output@4.done()
+[1821990.942] zxdg_output_v1@6.name("WL-1")
+[1821990.947] zxdg_output_v1@6.description("Wayland output 1")
+[1821990.955] zxdg_output_v1@6.logical_position(0, 0)
+[1821990.964] zxdg_output_v1@6.logical_size(480, 480)
+[1821990.967] wl_output@4.done()
+[1821990.969] ext_session_lock_v1@8.locked()
+[1821990.972] wl_seat@9.name("seat0")
+[1821990.975] wl_seat@9.capabilities(3)
+locked!
+[1821991.074]  -> wl_compositor@3.create_surface(new id wl_surface@10)
+[1821991.090]  -> ext_session_lock_v1@8.get_lock_surface(new id ext_session_lock_surface_v1@11, wl_surface@10, wl_output@4)
+[1821991.097]  -> ext_session_lock_surface_v1@11.destroy()
+[1821991.104]  -> wl_surface@10.destroy()
+[1821999.767]  -> wl_seat@9.get_keyboard(new id wl_keyboard@12)
+[1821999.803]  -> wl_seat@9.get_pointer(new id wl_pointer@13)
+[1822000.040] discarded [unknown]@11.[event 0](0 fd, 20 byte)
+[1822000.052] wl_display@1.delete_id(11)
+[1822000.055] wl_display@1.delete_id(10)
+[1822000.057] wl_keyboard@12.keymap(1, fd 14, 64354)
+[1822000.064] wl_keyboard@12.repeat_info(25, 600)
