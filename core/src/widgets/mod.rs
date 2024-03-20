@@ -3,6 +3,9 @@
 mod button;
 pub use button::Button;
 
+mod icon_button;
+pub use icon_button::IconButton;
+
 mod rounded_rect;
 pub use rounded_rect::RoundedRect;
 
@@ -20,3 +23,9 @@ pub use svg::Svg;
 
 mod slider;
 pub use slider::Slider;
+
+mod carousel;
+pub use carousel::Carousel;
+
+// mod textbox;
+// pub use textbox::{TextBox, TextBoxAction};

@@ -146,6 +146,38 @@ impl Default for Style {
             (StyleKey::new("Button", "border_width", None), 2.0.into()),
             (StyleKey::new("Button", "radius", None), 4.0.into()),
             (StyleKey::new("Button", "padding", None), 2.0.into()),
+            (
+                StyleKey::new("Button", "h_alignment", None),
+                HorizontalPosition::Center.into(),
+            ),
+            // IconButton
+            (
+                StyleKey::new("IconButton", "text_color", None),
+                Color::BLACK.into(),
+            ),
+            (StyleKey::new("IconButton", "font_size", None), 12.0.into()),
+            (
+                StyleKey::new("IconButton", "background_color", None),
+                Color::WHITE.into(),
+            ),
+            (
+                StyleKey::new("IconButton", "highlight_color", None),
+                Color::LIGHT_GREY.into(),
+            ),
+            (
+                StyleKey::new("IconButton", "active_color", None),
+                Color::MID_GREY.into(),
+            ),
+            (
+                StyleKey::new("IconButton", "border_color", None),
+                Color::BLACK.into(),
+            ),
+            (
+                StyleKey::new("IconButton", "border_width", None),
+                2.0.into(),
+            ),
+            (StyleKey::new("IconButton", "radius", None), 4.0.into()),
+            (StyleKey::new("IconButton", "padding", None), 2.0.into()),
             // RadioButton
             (
                 StyleKey::new("RadioButton", "text_color", None),
@@ -296,6 +328,8 @@ impl Default for Style {
                 StyleKey::new("Scroll", "bar_active_color", None),
                 Color::DARK_GREY.into(),
             ),
+            //Image
+            (StyleKey::new("Image", "radius", None), 0.0.into()),
         ]);
         Self(map)
     }

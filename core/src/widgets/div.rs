@@ -1,8 +1,10 @@
 use std::hash::Hash;
+use std::ops::Add;
 
 use crate::component::{Component, ComponentHasher, RenderContext};
 use crate::event;
 use crate::layout::*;
+use crate::renderables::rect::InstanceBuilder;
 use crate::renderables::{Rect, Renderable};
 use crate::style::{HorizontalPosition, StyleVal, Styled, VerticalPosition};
 use crate::types::*;
@@ -30,6 +32,7 @@ pub struct Div {
     pub background: Option<Color>,
     pub border_color: Option<Color>,
     pub border_width: Option<f32>,
+    pub radius: Option<(f32, f32, f32, f32)>,
 }
 
 impl Div {
@@ -42,9 +45,15 @@ impl Div {
         self
     }
 
-    pub fn border<C: Into<Color>>(mut self, color: C, width: f32) -> Self {
+    pub fn border<C: Into<Color>>(
+        mut self,
+        color: C,
+        width: f32,
+        radius: (f32, f32, f32, f32),
+    ) -> Self {
         self.border_color = Some(color.into());
         self.border_width = Some(width);
+        self.radius = Some(radius);
         self
     }
 
@@ -272,23 +281,35 @@ impl Component for Div {
             .map_or(0.0, |x| (x * context.scale_factor.floor()).round());
 
         if let Some(bg) = self.background {
-            rs.push(Renderable::Rect(Rect::new(
-                Pos {
-                    x: border_width + context.aabb.pos.x,
-                    y: border_width + context.aabb.pos.y,
+            let mut rect_instance = InstanceBuilder::default()
+                .pos(Pos {
+                    x: context.aabb.pos.x,
+                    y: context.aabb.pos.y,
                     z: 0.1,
-                },
-                context.aabb.size() - Scale::new(border_width * 2.0, border_width * 2.0),
-                bg,
-            )))
+                })
+                .scale(context.aabb.size())
+                .color(bg)
+                .build()
+                .unwrap();
+            if let Some(radius) = self.radius {
+                rect_instance.radius = radius;
+            };
+
+            rs.push(Renderable::Rect(Rect::from_instance_data(rect_instance)))
         }
 
-        if let (Some(color), Some(_width)) = (self.border_color, self.border_width) {
-            rs.push(Renderable::Rect(Rect::new(
-                context.aabb.pos,
-                context.aabb.size(),
-                color,
-            )))
+        if let (Some(color), Some(width), Some(radius)) =
+            (self.border_color, self.border_width, self.radius)
+        {
+            let rect_instance = InstanceBuilder::default()
+                .pos(context.aabb.pos)
+                .scale(context.aabb.size())
+                .border_color(color)
+                .border_size(width)
+                .radius(radius)
+                .build()
+                .unwrap();
+            rs.push(Renderable::Rect(Rect::from_instance_data(rect_instance)))
         }
 
         if self.scrollable() {

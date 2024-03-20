@@ -376,7 +376,9 @@ impl Node {
             self.inner_scale.hash(&mut hasher);
             self.render_hash = hasher.finish();
 
-            if self.render_hash != prev.render_hash {
+            //temporary commented to solve carousel
+            //if self.render_hash != prev.render_hash
+            if true {
                 let context = RenderContext {
                     aabb: self.aabb,
                     inner_scale: self.inner_scale,
@@ -490,6 +492,7 @@ impl Node {
                 {
                     event.over_subchild_n = event.over_child_n;
                     event.over_child_n = Some(n);
+                    event.over_child_n_aabb = Some(child.aabb);
                 }
             }
         }

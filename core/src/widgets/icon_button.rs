@@ -10,35 +10,35 @@ use crate::{size_pct, types::*};
 use mctk_macros::{component, state_component_impl};
 
 #[derive(Debug, Default)]
-struct ButtonState {
+struct IconButtonState {
     hover: bool,
     pressed: bool,
     tool_tip_open: Option<Point>,
     hover_start: Option<Instant>,
 }
 
-#[component(State = "ButtonState", Styled, Internal)]
-pub struct Button {
-    pub label: Vec<TextSegment>,
+#[component(State = "IconButtonState", Styled, Internal)]
+pub struct IconButton {
+    pub icon: String,
     pub on_click: Option<Box<dyn Fn() -> Message + Send + Sync>>,
     pub tool_tip: Option<String>,
 }
 
-impl std::fmt::Debug for Button {
+impl std::fmt::Debug for IconButton {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        f.debug_struct("Button")
-            .field("label", &self.label)
+        f.debug_struct("IconButton")
+            .field("icon", &self.icon)
             .finish()
     }
 }
 
-impl Button {
-    pub fn new(label: Vec<TextSegment>) -> Self {
+impl IconButton {
+    pub fn new<S: Into<String>>(icon: S) -> Self {
         Self {
-            label,
+            icon: icon.into(),
             on_click: None,
             tool_tip: None,
-            state: Some(ButtonState::default()),
+            state: Some(IconButtonState::default()),
             dirty: false,
             class: Default::default(),
             style_overrides: Default::default(),
@@ -56,8 +56,8 @@ impl Button {
     }
 }
 
-#[state_component_impl(ButtonState)]
-impl Component for Button {
+#[state_component_impl(IconButtonState)]
+impl Component for IconButton {
     fn view(&self) -> Option<Node> {
         let radius: f32 = self.style_val("radius").unwrap().f32();
         let padding: f64 = self.style_val("padding").unwrap().into();
@@ -89,23 +89,11 @@ impl Component for Button {
             )
         )
         .push(node!(
-            super::Text::new(self.label.clone())
-                .style("size", self.style_val("font_size").unwrap())
-                .style("color", self.style_val("text_color").unwrap())
-                .style("h_alignment", self.style_val("h_alignment").unwrap())
-                .style("font", "SpaceGrotesk-Regular"),
-            lay![size_pct: [100, Auto],]
+            super::Svg::new(self.icon.clone()),
+            lay![
+                size: size_pct!(100.0),
+            ],
         ));
-
-        // if let (Some(p), Some(tt)) = (self.state_ref().tool_tip_open, self.tool_tip.as_ref()) {
-        //     base = base.push(node!(
-        //         ToolTip::new(tt.clone()),
-        //         lay!(position_type: PositionType::Absolute,
-        //              z_index_increment: 1000.0,
-        //              position: (p + ToolTip::MOUSE_OFFSET).into(),
-        //         ),
-        //     ));
-        // }
 
         Some(base)
     }
@@ -126,7 +114,7 @@ impl Component for Button {
     }
 
     fn on_mouse_leave(&mut self, _event: &mut event::Event<event::MouseLeave>) {
-        // *self.state_mut() = ButtonState::default();
+        // *self.state_mut() = IconButtonState::default();
         // if let Some(w) = current_window() {
         //     w.unset_cursor();
         // }

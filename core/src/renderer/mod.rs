@@ -1,5 +1,8 @@
-use std::{fmt, sync::{Arc, RwLock}};
 use raw_window_handle::{RawDisplayHandle, RawWindowHandle};
+use std::{
+    fmt,
+    sync::{Arc, RwLock},
+};
 
 use crate::{font_cache::FontCache, window::Window, Node, PixelSize};
 

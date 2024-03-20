@@ -32,8 +32,11 @@ pub struct SvgData {
     pub scale: Scale,
 }
 
-pub fn init_gl_surface_context(raw_window_handle: RawWindowHandle,
-    (width, height): (u32, u32), gl_display: &Display) -> (Surface<WindowSurface>, PossiblyCurrentContext){
+pub fn init_gl_surface_context(
+    raw_window_handle: RawWindowHandle,
+    (width, height): (u32, u32),
+    gl_display: &Display,
+) -> (Surface<WindowSurface>, PossiblyCurrentContext) {
     let template = ConfigTemplateBuilder::new().with_alpha_size(8).build();
 
     let config = unsafe { gl_display.find_configs(template) }
@@ -53,7 +56,7 @@ pub fn init_gl_surface_context(raw_window_handle: RawWindowHandle,
             .create_context(&config, &context_attributes)
             .expect("Failed to create OpenGL context")
     };
-    
+
     let attrs = SurfaceAttributesBuilder::<WindowSurface>::new().build(
         raw_window_handle,
         NonZeroU32::new(width).unwrap(),
@@ -80,8 +83,9 @@ pub fn init_gl(
 ) -> (Display, Surface<WindowSurface>, PossiblyCurrentContext) {
     let gl_display =
         unsafe { Display::new(raw_display_handle).expect("Failed to create EGL Display") };
-    
-    let (gl_surface, gl_context) = init_gl_surface_context(raw_window_handle, (width, height), &gl_display);
+
+    let (gl_surface, gl_context) =
+        init_gl_surface_context(raw_window_handle, (width, height), &gl_display);
 
     (gl_display, gl_surface, gl_context)
 }
@@ -102,7 +106,18 @@ pub fn init_gl_canvas(
     canvas
 }
 
-fn init_canvas_renderer(raw_display_handle: RawDisplayHandle, raw_window_handle: RawWindowHandle, logical_size: PixelSize, scale_factor: f32, fonts: HashMap<String, String>, assets: HashMap<String, String>) -> (CanvasContext, HashMap<String, FontId>, HashMap<String, ImageId>) {
+fn init_canvas_renderer(
+    raw_display_handle: RawDisplayHandle,
+    raw_window_handle: RawWindowHandle,
+    logical_size: PixelSize,
+    scale_factor: f32,
+    fonts: HashMap<String, String>,
+    assets: HashMap<String, String>,
+) -> (
+    CanvasContext,
+    HashMap<String, FontId>,
+    HashMap<String, ImageId>,
+) {
     let size = logical_size;
     let width = size.width;
     let height = size.height;
@@ -135,7 +150,7 @@ fn init_canvas_renderer(raw_display_handle: RawDisplayHandle, raw_window_handle:
                 println!("error while loading font {:?} error: {:?}", name, e);
             }
         }
-    };
+    }
 
     let canvas_context = CanvasContext {
         gl_canvas,
@@ -143,7 +158,7 @@ fn init_canvas_renderer(raw_display_handle: RawDisplayHandle, raw_window_handle:
         gl_display,
         gl_surface,
     };
-    
+
     (canvas_context, loaded_fonts, loaded_assets)
 }
 
@@ -192,7 +207,13 @@ impl super::Renderer for CanvasRenderer {
         let mut loaded_svgs = HashMap::new();
 
         for (name, path) in svgs.into_iter() {
-            let svg_data = std::fs::read(path).unwrap();
+            let svg_data = match std::fs::read(&path) {
+                Ok(file) => file,
+                Err(e) => {
+                    println!("error {:?} path {:?}", e, path);
+                    panic!("{:?}", e);
+                }
+            };
             let tree = usvg::Tree::from_data(&svg_data, &usvg::Options::default()).unwrap();
             let width = tree.size.width() as f32;
             let height = tree.size.height() as f32;
@@ -225,7 +246,7 @@ impl super::Renderer for CanvasRenderer {
             window.scale_factor(),
             window.fonts(),
             window.assets(),
-        ); 
+        );
 
         self.context = canvas_context;
         self.fonts = fonts;
@@ -270,8 +291,14 @@ impl super::Renderer for CanvasRenderer {
                 Renderable::Text(text) => {
                     text.render(canvas, &self.fonts);
                 }
+                Renderable::RadialGradient(rg) => {
+                    rg.render(canvas);
+                }
             }
         }
+
+        // Make smol red rectangle
+        // canvas.clear_rect(0, 0, 30, 30, Color::rgbf(0., 1., 0.));
 
         // Tell renderer to execute all drawing commands
         canvas.flush();
