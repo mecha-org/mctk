@@ -519,6 +519,80 @@ impl Node {
         m
     }
 
+    /// Used to handle input specific event handlers that rely on the event knowing what is under the touch
+    /// First find the (ordered by z-index) nodes under the touch (highest z-index last),
+    /// then pass the list to `_handle_event_under_touch`, which will only handle the last
+    /// event on the list. It recursively moves through the nodes that may be under the touch
+    /// and pops off the `nodes_under` list when it handles that node. We repeat until there
+    /// is nothing left in `nodes_under`. If an event handler has caused the event to stop bubbling,
+    /// we can stop early.
+    fn handle_event_under_touch<E: EventInput>(
+        &mut self,
+        event: &mut Event<E>,
+        handler: fn(&mut Self, &mut Event<E>),
+    ) {
+        let mut nodes_under = self.nodes_under(event);
+        while !nodes_under.is_empty() && event.bubbles {
+            self._handle_event_under_touch(event, handler, &mut nodes_under);
+        }
+    }
+
+    fn _handle_event_under_touch<E: EventInput>(
+        &mut self,
+        event: &mut Event<E>,
+        handler: fn(&mut Self, &mut Event<E>),
+        node_order: &mut Vec<(u64, f32)>,
+    ) -> Vec<Message> {
+        let mut m: Vec<Message> = vec![];
+        event.over_child_n = None;
+        event.over_subchild_n = None;
+        for (n, child) in self.children.iter_mut().enumerate() {
+            if child
+                .component
+                .is_mouse_maybe_over(event.touch_position, child.inclusive_aabb)
+            {
+                for message in child
+                    ._handle_event_under_touch(event, handler, node_order)
+                    .drain(..)
+                {
+                    m.append(&mut self.component.update(message));
+                    if self.component.is_dirty() {
+                        event.dirty();
+                    }
+                }
+                if child
+                    .component
+                    .is_touch_over(event.touch_position, child.aabb)
+                {
+                    event.over_subchild_n = event.over_child_n;
+                    event.over_child_n = Some(n);
+                    event.over_child_n_aabb = Some(child.aabb);
+                }
+            }
+        }
+
+        if event.bubbles
+            && Some(self.id) == node_order.last().map(|x| x.0)
+            && self
+                .component
+                .is_touch_over(event.touch_position, self.aabb)
+        {
+            node_order.pop();
+            event.current_node_id = Some(self.id);
+            event.current_aabb = Some(self.aabb);
+            event.current_inner_scale = self.inner_scale;
+            handler(self, event);
+            if self.component.is_dirty() {
+                event.dirty();
+            }
+            m.append(&mut event.messages);
+        } else if Some(self.id) == node_order.last().map(|x| x.0) {
+            node_order.pop();
+        }
+
+        m
+    }
+
     fn nodes_under<E: EventInput>(&self, event: &Event<E>) -> Vec<(u64, f32)> {
         let mut collector: Vec<(u64, f32)> = vec![];
 
@@ -761,6 +835,22 @@ impl Node {
         self.handle_targeted_event(event, |node, e| node.component.on_key_press(e));
     }
 
+    pub(crate) fn touch_down(&mut self, event: &mut Event<event::TouchDown>) {
+        self.handle_event_under_touch(event, |node, e| node.component.on_touch_down(e));
+    }
+
+    pub(crate) fn touch_up(&mut self, event: &mut Event<event::TouchUp>) {
+        self.handle_event_under_touch(event, |node, e| node.component.on_touch_up(e));
+    }
+
+    pub(crate) fn touch_moved(&mut self, event: &mut Event<event::TouchMoved>) {
+        self.handle_event_under_touch(event, |node, e| node.component.on_touch_moved(e));
+    }
+
+    pub(crate) fn touch_cancel(&mut self, event: &mut Event<event::TouchCancel>) {
+        self.handle_targeted_event(event, |node, e| node.component.on_touch_cancel(e));
+    }
+    
     pub(crate) fn text_entry(&mut self, event: &mut Event<event::TextEntry>) {
         self.handle_targeted_event(event, |node, e| node.component.on_text_entry(e));
     }

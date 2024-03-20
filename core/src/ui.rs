@@ -547,6 +547,47 @@ impl<W: 'static + Window, A: 'static + RootComponent + Component + Default + Sen
                 let focus = event.focus;
                 self.handle_event(Node::key_up, &mut event, focus);
             }
+            Input::Touch(TouchAction::Down { x, y }) => {
+                self.event_cache.touch_down(*x, *y);
+                let mut event = Event::new(
+                    event::TouchDown {
+                        x: *x * self.event_cache.scale_factor,
+                        y: *y * self.event_cache.scale_factor,
+                    },
+                    &self.event_cache,
+                );
+                self.handle_event(Node::touch_down, &mut event, None);
+            },
+            Input::Touch(TouchAction::Up { x, y }) => {
+                let mut event = Event::new(
+                    event::TouchUp {
+                        x: *x * self.event_cache.scale_factor,
+                        y: *y * self.event_cache.scale_factor,
+                    },
+                    &self.event_cache,
+                );
+                self.handle_event(Node::touch_up, &mut event, None);
+            },
+            Input::Touch(TouchAction::Moved { x, y }) => {
+                let mut event = Event::new(
+                    event::TouchMoved {
+                        x: *x * self.event_cache.scale_factor,
+                        y: *y * self.event_cache.scale_factor,
+                    },
+                    &self.event_cache,
+                );
+                self.handle_event(Node::touch_moved, &mut event, None);
+            },
+            Input::Touch(TouchAction::Cancel { x, y }) => {
+                let mut event = Event::new(
+                    event::TouchCancel {
+                        x: *x * self.event_cache.scale_factor,
+                        y: *y * self.event_cache.scale_factor,
+                    },
+                    &self.event_cache,
+                );
+                self.handle_event(Node::touch_cancel, &mut event, None);
+            },
             Input::Text(s) => {
                 let mods = self.event_cache.modifiers_held;
                 if !mods.alt && !mods.ctrl && !mods.meta {

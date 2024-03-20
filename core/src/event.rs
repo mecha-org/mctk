@@ -26,6 +26,7 @@ pub struct Event<T: EventInput> {
     pub(crate) bubbles: bool,
     pub(crate) dirty: bool,
     pub(crate) mouse_position: Point,
+    pub(crate) touch_position: Point,
     /// What keyboard modifiers (Shift, Alt, Ctr, Meta) were held when this event was fired.
     pub modifiers_held: ModifiersHeld,
     pub(crate) current_node_id: Option<u64>,
@@ -132,6 +133,46 @@ pub struct DoubleClick(
     pub MouseButton,
 );
 impl EventInput for DoubleClick {}
+
+/// [`EventInput`] type for touch down events.
+#[derive(Debug)]
+pub struct TouchDown {
+    /// Location of touch along the x axis
+    pub x: f32,
+    /// Location of touch along the y axis
+    pub y: f32,
+}
+impl EventInput for TouchDown {}
+
+/// [`EventInput`] type for touch up events.
+#[derive(Debug)]
+pub struct TouchUp {
+    /// Location of touch along the x axis
+    pub x: f32,
+    /// Location of touch along the y axis
+    pub y: f32,
+}
+impl EventInput for TouchUp {}
+
+/// [`EventInput`] type for touch moved events.
+#[derive(Debug)]
+pub struct TouchMoved {
+    /// Location of touch along the x axis
+    pub x: f32,
+    /// Location of touch along the y axis
+    pub y: f32,
+}
+impl EventInput for TouchMoved {}
+
+/// [`EventInput`] type for touch cnacel events.
+#[derive(Debug)]
+pub struct TouchCancel {
+    /// Location of touch along the x axis
+    pub x: f32,
+    /// Location of touch along the y axis
+    pub y: f32,
+}
+impl EventInput for TouchCancel {}
 
 /// [`EventInput`] type for key down events.
 #[derive(Debug)]
@@ -308,6 +349,7 @@ impl<T: EventInput> Event<T> {
             dirty: false,
             modifiers_held: event_cache.modifiers_held,
             mouse_position: event_cache.mouse_position,
+            touch_position: event_cache.touch_position,
             focus: Some(event_cache.focus),
             target: None,
             current_node_id: None,
@@ -486,6 +528,8 @@ pub(crate) struct EventCache {
     pub keys_held: HashSet<Key>,
     pub modifiers_held: ModifiersHeld,
     pub mouse_buttons_held: MouseButtonsHeld,
+    pub touch_held: bool,
+    pub touch_position: Point,
     pub mouse_over: Option<u64>,
     pub mouse_position: Point,
     // Used to detect double clicks
@@ -529,6 +573,8 @@ impl EventCache {
             mouse_position: Default::default(),
             last_mouse_click: Instant::now(),
             last_mouse_click_position: Default::default(),
+            touch_held: false,
+            touch_position: Default::default(),
             drag_button: None,
             drag_started: None,
             drag_target: None,
@@ -637,5 +683,20 @@ impl EventCache {
         } else {
             None
         }
+    }
+
+    pub(crate) fn touch_down(&mut self, x: f32, y: f32) {
+        self.touch_held = true;
+        self.touch_position = Point::new(x, y);
+    }
+
+    pub(crate) fn touch_up(&mut self, x: f32, y: f32) {
+        self.touch_held = false;
+        self.touch_position = Point::new(x, y);
+    }
+
+    pub(crate) fn touch_moved(&mut self, x: f32, y: f32) {
+        self.touch_held = true;
+        self.touch_position = Point::new(x, y);
     }
 }

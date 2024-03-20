@@ -8,7 +8,7 @@ use mctk_core::widgets::Button;
 use mctk_core::{lay, msg, size, size_pct, txt, Color};
 use mctk_core::{node, node::Node};
 use mctk_macros::{component, state_component_impl};
-use mctk_smithay::layer::LayerOptions;
+use mctk_smithay::layer_surface::LayerOptions;
 use mctk_smithay::layer_window::LayerWindowParams;
 use mctk_smithay::WindowOptions;
 use smithay_client_toolkit::shell::wlr_layer;
