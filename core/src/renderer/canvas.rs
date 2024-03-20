@@ -147,7 +147,7 @@ fn init_canvas_renderer(
                 loaded_assets.insert(name, font_id);
             }
             Err(e) => {
-                println!("error while loading font {:?} error: {:?}", name, e);
+                println!("error while loading png {:?} error: {:?}", name, e);
             }
         }
     }
