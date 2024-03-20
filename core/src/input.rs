@@ -243,6 +243,16 @@ pub enum Button {
     Mouse(MouseButton),
 }
 
+/// Touch actions
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum TouchAction {
+    Up { x: f32, y: f32 },
+    Down { x: f32, y: f32 },
+    Cancel { x: f32, y: f32 },
+    Moved { x: f32, y: f32 }
+}
+
+
 /// Drag and drop inputs
 #[derive(Clone, Debug, PartialEq)]
 pub enum Drag {
@@ -267,4 +277,5 @@ pub enum Input {
     Timer,
     Exit,
     Drag(Drag),
+    Touch(TouchAction),
 }

@@ -1,6 +1,6 @@
-use layer::{LayerOptions, LayerShellSctkWindow};
+use layer_surface::{LayerOptions, LayerShellSctkWindow};
 use mctk_core::component::{self, Component, RootComponent};
-use mctk_core::input::{Button, Input, Motion, MouseButton};
+use mctk_core::input::{Button, Input, Motion, MouseButton, TouchAction};
 use mctk_core::raw_handle::RawWaylandHandle;
 use mctk_core::types::PixelSize;
 use mctk_core::ui::UI;
@@ -13,7 +13,9 @@ use smithay_client_toolkit::reexports::calloop::{self, EventLoop};
 use std::collections::HashMap;
 use std::ptr::null;
 
-use crate::{layer, pointer, WindowEvent, WindowMessage, WindowOptions};
+use crate::keyboard::{keysym_to_key, KeyboardEvent};
+use crate::touch::TouchEvent;
+use crate::{layer_surface, pointer, WindowEvent, WindowMessage, WindowOptions};
 
 pub struct LayerWindow {
     width: u32,
@@ -80,8 +82,6 @@ impl LayerWindow {
             svgs,
         });
 
-        let window_tx_loop = window_tx.clone();
-
         // let sig = event_loop.get_signal();
 
         // insert handle
@@ -117,12 +117,21 @@ impl LayerWindow {
                                 // println!("window_event::{:?}", w_ev);
                                 match w_ev {
                                     WindowEvent::CloseRequested => {
-                                        // signal loop to stop
-                                        // sig.stop();
+                                        ui.handle_input(&Input::Exit);
                                     }
+                                    WindowEvent::Focused => {
+                                        ui.handle_input(&Input::Focus(true));
+                                    },
+                                    WindowEvent::Unfocused => {
+                                        ui.handle_input(&Input::Focus(false));
+                                    },
                                     WindowEvent::Mouse(m_event) => match m_event {
-                                        MouseEvent::CursorEntered => {}
-                                        MouseEvent::CursorLeft => {}
+                                        MouseEvent::CursorEntered => {
+                                            ui.handle_input(&Input::MouseEnterWindow);
+                                        }
+                                        MouseEvent::CursorLeft => {
+                                            ui.handle_input(&Input::MouseLeaveWindow);
+                                        }
                                         MouseEvent::CursorMoved {
                                             position,
                                             scale_factor,
@@ -168,8 +177,32 @@ impl LayerWindow {
                                             ui.handle_input(&Input::Motion(scroll));
                                         }
                                     },
-                                    WindowEvent::KeyboardInput => todo!(),
-                                    // _ => {},
+                                    WindowEvent::Keyboard(k_ev) => {
+                                        match k_ev {
+                                            KeyboardEvent::KeyPressed { key } => {
+                                                ui.handle_input(&Input::Press(Button::Keyboard(keysym_to_key(key))));
+                                            },
+                                            KeyboardEvent::KeyReleased { key } => {
+                                                ui.handle_input(&Input::Release(Button::Keyboard(keysym_to_key(key))));
+                                            }
+                                        }
+                                    },
+                                    WindowEvent::Touch(t_ev) => {
+                                        match t_ev {
+                                            TouchEvent::Up { position, scale_factor, .. } => {
+                                                ui.handle_input(&Input::Touch(TouchAction::Up { x: position.x / scale_factor, y: position.y / scale_factor }))
+                                            },
+                                            TouchEvent::Down { position, scale_factor, .. } => {
+                                                ui.handle_input(&Input::Touch(TouchAction::Down { x: position.x / scale_factor, y: position.y / scale_factor }))
+                                            },
+                                            TouchEvent::Motion { position, scale_factor, .. } => {
+                                                ui.handle_input(&Input::Touch(TouchAction::Moved { x: position.x / scale_factor, y: position.y / scale_factor }))
+                                            },
+                                            TouchEvent::Cancel { position, scale_factor, .. } => {
+                                                ui.handle_input(&Input::Touch(TouchAction::Cancel { x: position.x / scale_factor, y: position.y / scale_factor }))
+                                            },
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -184,8 +217,6 @@ impl LayerWindow {
 }
 
 impl mctk_core::window::Window for LayerWindow {
-    // TODO: This isn't good
-
     fn logical_size(&self) -> PixelSize {
         PixelSize {
             width: self.width,

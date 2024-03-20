@@ -1,20 +1,14 @@
 use crate::{
-    lock_window::SessionLockMessage,
-    new_raw_wayland_handle,
-    pointer::{convert_button, MouseEvent, Point, ScrollDelta},
-    WindowEvent, WindowMessage, WindowOptions,
+    keyboard::KeyboardEvent, lock_window::SessionLockMessage, new_raw_wayland_handle, pointer::{convert_button, MouseEvent, Point, ScrollDelta}, touch::{Position, TouchEvent, TouchPoint}, WindowEvent, WindowMessage, WindowOptions
 };
+use ahash::AHashMap;
 use anyhow::Context;
 use mctk_core::raw_handle::RawWaylandHandle;
 use raw_window_handle::{
     RawDisplayHandle, RawWindowHandle, WaylandDisplayHandle, WaylandWindowHandle,
 };
 use smithay_client_toolkit::{
-    compositor::{CompositorHandler, CompositorState},
-    delegate_compositor, delegate_keyboard, delegate_output, delegate_pointer, delegate_registry,
-    delegate_seat,
-    output::{OutputHandler, OutputState},
-    reexports::{
+    compositor::{CompositorHandler, CompositorState}, delegate_compositor, delegate_keyboard, delegate_output, delegate_pointer, delegate_registry, delegate_seat, delegate_touch, output::{OutputHandler, OutputState}, reexports::{
         calloop::{
             self,
             channel::{Channel, Sender},
@@ -37,16 +31,11 @@ use smithay_client_toolkit::{
             ext_session_lock_surface_v1::{self, ExtSessionLockSurfaceV1},
             ext_session_lock_v1::{self, ExtSessionLockV1},
         },
-    },
-    registry::{ProvidesRegistryState, RegistryState},
-    registry_handlers,
-    seat::{
-        keyboard::{KeyEvent, KeyboardHandler, Keysym, Modifiers},
-        pointer::{PointerEvent, PointerEventKind, PointerHandler},
-        Capability, SeatHandler, SeatState,
-    },
+    }, registry::{ProvidesRegistryState, RegistryState}, registry_handlers, seat::{
+        keyboard::{KeyEvent, KeyboardHandler, Keysym, Modifiers}, pointer::{PointerEvent, PointerEventKind, PointerHandler}, touch::TouchHandler, Capability, SeatHandler, SeatState
+    }
 };
-use wayland_client::{protocol::wl_display::WlDisplay, Dispatch};
+use wayland_client::{protocol::{wl_display::WlDisplay, wl_touch::{self, WlTouch}}, Dispatch};
 
 pub struct SessionLockSctkWindow {
     window_tx: Sender<WindowMessage>,
@@ -64,6 +53,8 @@ pub struct SessionLockSctkWindow {
     pub scale_factor: f32,
     wl_display: WlDisplay,
     wl_surface: WlSurface,
+    touch: Option<wl_touch::WlTouch>,
+    touch_map: AHashMap<i32, TouchPoint>,
     // session lock surface
     // session_lock_manager: ExtSessionLockManagerV1,
     pub session_lock: ExtSessionLockV1,
@@ -158,6 +149,8 @@ impl SessionLockSctkWindow {
             keyboard_focus: false,
             keyboard_modifiers: Modifiers::default(),
             pointer: None,
+            touch: None,
+            touch_map: AHashMap::new(),
             initial_configure_sent: false,
             wayland_handle,
             scale_factor,
@@ -271,6 +264,10 @@ impl SeatHandler for SessionLockSctkWindow {
             let pointer = self.seat_state.get_pointer(qh, &seat).unwrap();
             self.pointer = Some(pointer);
         }
+        if capability == Capability::Touch && self.touch.is_none() {
+            let touch = self.seat_state.get_touch(qh, &seat).unwrap();
+            self.touch = Some(touch);
+        }
     }
 
     fn remove_capability(
@@ -304,13 +301,14 @@ impl KeyboardHandler for SessionLockSctkWindow {
         surface: &WlSurface,
         _serial: u32,
         _raw: &[u32],
-        _keysyms: &[Keysym],
+        _: &[Keysym],
     ) {
         if &self.wl_surface != surface {
             return;
         }
 
         self.keyboard_focus = true;
+        self.send_window_event(WindowEvent::Focused);
     }
 
     fn leave(
@@ -326,6 +324,7 @@ impl KeyboardHandler for SessionLockSctkWindow {
         }
 
         self.keyboard_focus = false;
+        self.send_window_event(WindowEvent::Unfocused);
     }
 
     fn press_key(
@@ -339,6 +338,8 @@ impl KeyboardHandler for SessionLockSctkWindow {
         if !self.keyboard_focus {
             return;
         }
+        let key = event.keysym;
+        self.send_window_event(WindowEvent::Keyboard(KeyboardEvent::KeyPressed { key }))
     }
 
     fn release_key(
@@ -352,6 +353,9 @@ impl KeyboardHandler for SessionLockSctkWindow {
         if !self.keyboard_focus {
             return;
         }
+
+        let key = event.keysym;
+        self.send_window_event(WindowEvent::Keyboard(KeyboardEvent::KeyReleased { key }))
     }
 
     fn update_modifiers(
@@ -437,6 +441,124 @@ impl PointerHandler for SessionLockSctkWindow {
     }
 }
 
+impl TouchHandler for SessionLockSctkWindow {
+    fn down(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &WlTouch,
+        _: u32,
+        time: u32,
+        surface: WlSurface,
+        id: i32,
+        position: (f64, f64),
+    ) {
+        if &self.wl_surface != &surface {
+            return;
+        }
+        let scale_factor = self.scale_factor;
+
+        // insert the touch point
+        self.touch_map.insert(id, TouchPoint { surface, position: Position { x: position.0 as f32, y: position.1 as f32 } });
+
+        self.send_window_event(WindowEvent::Touch(TouchEvent::Down {
+            id,
+            time,
+            position: Position { x: position.0 as f32, y: position.1 as f32 },
+            scale_factor,
+        }));
+    }
+
+    fn up(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &WlTouch,
+        _: u32,
+        time: u32,
+        id: i32,
+    ) {
+        let scale_factor = self.scale_factor;
+        let touch_point = match self.touch_map.remove(&id) {
+            Some(touch_point) => touch_point,
+            None => return,
+        };
+
+        self.send_window_event(WindowEvent::Touch(TouchEvent::Up {
+            id,
+            time,
+            position: Position { x: touch_point.position.x, y: touch_point.position.y },
+            scale_factor,
+        }));
+    }
+
+    fn motion(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &WlTouch,
+        time: u32,
+        id: i32,
+        position: (f64, f64),
+    ) {
+        let scale_factor = self.scale_factor;
+        let touch_point = match self.touch_map.get_mut(&id) {
+            Some(touch_point) => touch_point,
+            None => return,
+        };
+
+        touch_point.position = Position { x: position.0 as f32, y: position.1 as f32 };
+        self.send_window_event(WindowEvent::Touch(TouchEvent::Motion {
+            id,
+            time,
+            position: Position { x: position.0 as f32, y: position.0 as f32 },
+            scale_factor,
+        }));
+    }
+
+    fn shape(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &WlTouch,
+        _: i32,
+        _: f64,
+        _: f64,
+    ) {
+        // blank
+    }
+
+    fn orientation(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &WlTouch,
+        _: i32,
+        _: f64,
+    ) {
+        // blank
+    }
+
+    fn cancel(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &WlTouch
+    ) {
+        let scale_factor = self.scale_factor;
+        for (id, tp) in self.touch_map.clone().into_iter() {
+            let touch_point = tp.clone();
+            self.send_window_event(WindowEvent::Touch(TouchEvent::Cancel { 
+                id,
+                position: Position { x: touch_point.position.x, y: touch_point.position.y },
+                scale_factor,
+            }));
+        }
+
+        self.touch_map.drain();
+    }
+}
+
 impl ProvidesRegistryState for SessionLockSctkWindow {
     fn registry(&mut self) -> &mut RegistryState {
         &mut self.registry_state
@@ -450,6 +572,7 @@ delegate_output!(SessionLockSctkWindow);
 delegate_seat!(SessionLockSctkWindow);
 delegate_keyboard!(SessionLockSctkWindow);
 delegate_pointer!(SessionLockSctkWindow);
+delegate_touch!(SessionLockSctkWindow);
 delegate_registry!(SessionLockSctkWindow);
 
 /* Session Lock binds */
@@ -468,7 +591,7 @@ impl Dispatch<ExtSessionLockManagerV1, ()> for SessionLockSctkWindow {
 
 impl Dispatch<ExtSessionLockV1, ()> for SessionLockSctkWindow {
     fn event(
-        state: &mut Self,
+        _: &mut Self,
         _: &ExtSessionLockV1,
         event: <ExtSessionLockV1 as Proxy>::Event,
         _: &(),

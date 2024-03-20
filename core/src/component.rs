@@ -128,6 +128,12 @@ pub trait Component: fmt::Debug {
         aabb.is_under(mouse_position)
     }
 
+    /// Is the `touch_position` over this Component? Implement if the Component has
+    /// non-rectangular geometry. Otherwise will default to `aabb.is_under(touch_position)`.
+    fn is_touch_over(&self, touch_position: Point, aabb: AABB) -> bool {
+        aabb.is_under(touch_position)
+    }
+
     /// TODO: Why does this exist? aabb is `inclusive_aabb`, which has something
     /// to do with scrollables, but why does that exist?
     fn is_mouse_maybe_over(&self, mouse_position: Point, aabb: AABB) -> bool {
@@ -205,6 +211,14 @@ pub trait Component: fmt::Debug {
     fn on_mouse_leave(&mut self, _event: &mut Event<event::MouseLeave>) {}
     /// Handle mouse motion events. These events will only be sent if the mouse is over the Component.
     fn on_mouse_motion(&mut self, _event: &mut Event<event::MouseMotion>) {}
+    /// Handle touch down events. These events will only be sent if the touch is over the Component.
+    fn on_touch_down(&mut self, _event: &mut Event<event::TouchDown>) {}
+    /// Handle touch up events. These events will only be sent if the touch is over the Component.
+    fn on_touch_up(&mut self, _event: &mut Event<event::TouchUp>) {}
+    /// Handle touch up events. These events will only be sent if the touch is over the Component.
+    fn on_touch_moved(&mut self, _event: &mut Event<event::TouchMoved>) {}
+    /// Handle touch cancel events. These events will only be sent if the touch is over the Component.
+    fn on_touch_cancel(&mut self, _event: &mut Event<event::TouchCancel>) {}
     /// Handle scroll events. These events will only be sent if the mouse is over the Component.
     fn on_scroll(&mut self, _event: &mut Event<event::Scroll>) {}
     /// Handle mouse drag events (i.e. the user clicks a mouse button over the Component and starts moving it). These events will only be sent if the mouse is over the Component.
