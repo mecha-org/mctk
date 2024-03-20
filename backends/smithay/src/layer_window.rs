@@ -1,18 +1,17 @@
-
-use std::collections::HashMap;
-use std::ptr::null;
-use layer::{LayerShellSctkWindow, LayerOptions};
-use mctk_core::component::{self, Component};
+use layer::{LayerOptions, LayerShellSctkWindow};
+use mctk_core::component::{self, Component, RootComponent};
 use mctk_core::input::{Button, Input, Motion, MouseButton};
 use mctk_core::raw_handle::RawWaylandHandle;
 use mctk_core::types::PixelSize;
 use mctk_core::ui::UI;
 use pointer::{MouseEvent, ScrollDelta};
 use raw_window_handle::{
-    HasRawDisplayHandle, HasRawWindowHandle, RawDisplayHandle, RawWindowHandle
+    HasRawDisplayHandle, HasRawWindowHandle, RawDisplayHandle, RawWindowHandle,
 };
 use smithay_client_toolkit::reexports::calloop::channel::{Event, Sender};
 use smithay_client_toolkit::reexports::calloop::{self, EventLoop};
+use std::collections::HashMap;
+use std::ptr::null;
 
 use crate::{layer, pointer, WindowEvent, WindowMessage, WindowOptions};
 
@@ -28,7 +27,6 @@ pub struct LayerWindow {
 }
 unsafe impl Send for LayerWindow {}
 unsafe impl Sync for LayerWindow {}
-
 
 pub struct LayerWindowParams {
     pub title: String,
@@ -49,7 +47,7 @@ impl LayerWindow {
         Sender<WindowMessage>,
     )
     where
-        A: 'static + Component + Default + Send + Sync,
+        A: 'static + RootComponent + Component + Default + Send + Sync,
     {
         let LayerWindowParams {
             title,
@@ -94,11 +92,15 @@ impl LayerWindow {
                 let _ = match ev {
                     calloop::channel::Event::Msg(event) => {
                         match event {
-                            WindowMessage::Configure { width, height, wayland_handle } => {
+                            WindowMessage::Configure {
+                                width,
+                                height,
+                                wayland_handle,
+                            } => {
                                 ui.configure(width, height, wayland_handle);
                                 ui.draw();
                                 ui.render();
-                            },
+                            }
                             WindowMessage::Send { message } => {
                                 ui.update(message);
                             }
@@ -107,6 +109,7 @@ impl LayerWindow {
                                 ui.render();
                             }
                             WindowMessage::RedrawRequested => {
+                                ui.handle_input(&Input::Timer);
                                 ui.draw();
                                 ui.render();
                             }
@@ -226,6 +229,10 @@ impl mctk_core::window::Window for LayerWindow {
 
     fn has_handle(&self) -> bool {
         self.handle.is_some()
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }
 

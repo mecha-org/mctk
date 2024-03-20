@@ -9,6 +9,7 @@ use crate::renderables::types::Canvas;
 use crate::renderables::Renderable;
 use crate::renderer::Caches;
 use crate::types::*;
+use crate::window::Window;
 use ahash::AHasher;
 
 /// A `Box<dyn Any>` type, used to convey information from a [`Component`] to one of its parent nodes. Passed to [`Event#emit`][Event#method.emit].
@@ -237,4 +238,9 @@ pub trait Component: fmt::Debug {
     fn on_drag_drop(&mut self, _event: &mut Event<event::DragDrop>) {}
     #[doc(hidden)]
     fn on_menu_select(&mut self, _event: &mut Event<event::MenuSelect>) {}
+}
+
+pub trait RootComponent {
+    // Called when a root node is first instantiated, this method will only be called for root components. This is called after state is init()
+    fn root(&mut self, window: &dyn Any) {}
 }

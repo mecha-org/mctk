@@ -254,6 +254,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "carousel"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "mctk_core",
+ "mctk_macros",
+ "mctk_smithay",
+ "smithay-client-toolkit 0.18.1",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "cc"
 version = "1.0.83"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -939,6 +953,20 @@ name = "hashbrown"
 version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "290f1a1d9242c78d09ce40a5e87e7554ee637af1351968159f4952f028f75604"
+
+[[package]]
+name = "hello"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "mctk_core",
+ "mctk_macros",
+ "mctk_smithay",
+ "smithay-client-toolkit 0.18.1",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
 
 [[package]]
 name = "hello-world"

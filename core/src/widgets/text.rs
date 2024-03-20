@@ -68,7 +68,7 @@ impl Component for Text {
         font_cache: &FontCache,
         scale: f32,
     ) -> (Option<f32>, Option<f32>) {
-        (width, Some(self.style_val("size").unwrap().f32() * 1.5))
+        (width, Some(self.style_val("size").unwrap().f32() * 1.75))
         // let c = &self.state_ref().bounds_cache;
         // if c.output.is_some()
         //     && c.width == width

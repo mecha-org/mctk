@@ -3,8 +3,8 @@
 use std::collections::HashSet;
 use std::time::Instant;
 
-use super::types::*;
 use super::input::{Key, MouseButton};
+use super::types::*;
 use crate::component::Message;
 // use crate::ui::focus_immediately;
 
@@ -32,6 +32,7 @@ pub struct Event<T: EventInput> {
     pub(crate) current_aabb: Option<AABB>,
     pub(crate) current_inner_scale: Option<Scale>,
     pub(crate) over_child_n: Option<usize>,
+    pub(crate) over_child_n_aabb: Option<AABB>,
     pub(crate) over_subchild_n: Option<usize>,
     pub(crate) target: Option<u64>,
     pub(crate) focus: Option<u64>,
@@ -52,6 +53,7 @@ impl<T: EventInput> std::fmt::Debug for Event<T> {
             .field("current_aabb", &self.current_aabb)
             .field("current_inner_scale", &self.current_inner_scale)
             .field("over_child_n", &self.over_child_n)
+            .field("over_child_n_aabb", &self.over_child_n_aabb)
             .field("over_subchild_n", &self.over_subchild_n)
             .field("target", &self.target)
             .field("focus", &self.focus)
@@ -312,6 +314,7 @@ impl<T: EventInput> Event<T> {
             current_aabb: None,
             current_inner_scale: None,
             over_child_n: None,
+            over_child_n_aabb: None,
             over_subchild_n: None,
             scale_factor: event_cache.scale_factor,
             messages: vec![],
@@ -386,6 +389,11 @@ impl<T: EventInput> Event<T> {
     /// Returns which child of this Node the mouse is over, if any.
     pub fn over_child_n(&self) -> Option<usize> {
         self.over_child_n
+    }
+
+    /// Returns which child aabb of this Node the mouse is over, if any.
+    pub fn over_child_n_aabb(&self) -> Option<AABB> {
+        self.over_child_n_aabb
     }
 
     /// Returns which child of the child of this Node the mouse is over, if any.

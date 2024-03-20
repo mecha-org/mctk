@@ -3,7 +3,7 @@ use super::types::{self, Corners, Edges};
 use crate::types::{Color, Point, Pos, Scale, AABB};
 use bytemuck::{Pod, Zeroable};
 use derive_builder::Builder;
-use femtovg::{Color as fem_color, ImageId, Paint, Path};
+use femtovg::{Color as fem_color, CompositeOperation, ImageId, Paint, Path};
 
 #[derive(Debug, Clone)]
 pub enum Gradient {
@@ -23,18 +23,20 @@ pub enum Gradient {
 pub struct Instance {
     pub pos: Pos,
     pub scale: Scale,
-    #[builder(default = "Default::default()")]
+    #[builder(default = "Color::TRANSPARENT")]
     pub color: Color,
     #[builder(default = "(0., 0., 0., 0.)")]
     pub radius: (f32, f32, f32, f32),
-    #[builder(default = "Edges::all(Color::rgb(0.0, 0.0, 0.0))")]
-    pub border_color: Edges<Color>,
-    #[builder(default = "Edges::all(0.0)")]
-    pub border_size: Edges<f32>,
+    #[builder(default = "Color::TRANSPARENT")]
+    pub border_color: Color,
+    #[builder(default = "0.0")]
+    pub border_size: f32,
     #[builder(default = "None")]
     pub bg_image: Option<ImageId>,
     #[builder(default = "None")]
     pub gradient: Option<Gradient>,
+    #[builder(default = "CompositeOperation::SourceOver")]
+    pub composite_operation: CompositeOperation,
 }
 
 #[derive(Debug)]
@@ -51,9 +53,10 @@ impl Rect {
                 color,
                 radius: (0., 0., 0., 0.),
                 bg_image: None,
-                border_color: Edges::all(Color::default()),
-                border_size: Edges::all(0.0),
+                border_color: Color::TRANSPARENT,
+                border_size: 0.0,
                 gradient: None,
+                composite_operation: CompositeOperation::SourceOver,
             },
         }
     }
@@ -72,9 +75,12 @@ impl Rect {
             border_color,
             border_size,
             gradient,
+            composite_operation,
         } = self.instance_data.clone();
         let origin = pos;
         let size = scale;
+
+        canvas.global_composite_operation(composite_operation);
         let mut path = Path::new();
         path.rounded_rect_varying(
             origin.x,
@@ -88,7 +94,7 @@ impl Rect {
         );
 
         //Add background image if any
-        let mut background = match bg_image {
+        let background = match bg_image {
             Some(image_id) => Paint::image(
                 image_id,
                 origin.x,
@@ -100,8 +106,12 @@ impl Rect {
             ),
             None => Paint::color(color.into()),
         };
-
         canvas.fill_path(&path, &background);
+
+        let mut paint = Paint::color(border_color.into());
+        paint.set_line_width(border_size);
+        canvas.stroke_path(&path, &paint);
+        canvas.global_composite_operation(CompositeOperation::SourceOver);
 
         //Add gradient
         // match gradient {
@@ -123,37 +133,37 @@ impl Rect {
         //     None => (),
         // }
 
-        //Add borders
-        //border top
-        let mut path = Path::new();
-        path.move_to(origin.x, origin.y);
-        path.line_to(origin.x + size.width, origin.y);
-        let mut paint = Paint::color(border_color.top.into());
-        paint.set_line_width(border_size.top);
-        canvas.stroke_path(&path, &paint);
+        // //Add borders
+        // //border top
+        // let mut path = Path::new();
+        // path.move_to(origin.x, origin.y);
+        // path.line_to(origin.x + size.width, origin.y);
+        // let mut paint = Paint::color(border_color.into());
+        // paint.set_line_width(border_size);
+        // canvas.stroke_path(&path, &paint);
 
-        //border right
-        let mut path = Path::new();
-        path.move_to(origin.x + size.width, origin.y);
-        path.line_to(origin.x + size.width, origin.y + size.height);
-        let mut paint = Paint::color(border_color.right.into());
-        paint.set_line_width(border_size.right);
-        canvas.stroke_path(&path, &paint);
+        // //border right
+        // let mut path = Path::new();
+        // path.move_to(origin.x + size.width, origin.y);
+        // path.line_to(origin.x + size.width, origin.y + size.height);
+        // let mut paint = Paint::color(border_color.into());
+        // paint.set_line_width(border_size);
+        // canvas.stroke_path(&path, &paint);
 
-        //border bottom
-        let mut path = Path::new();
-        path.move_to(origin.x, origin.y + size.height);
-        path.line_to(origin.x + size.width, origin.y + size.height);
-        let mut paint = Paint::color(border_color.bottom.into());
-        paint.set_line_width(border_size.bottom);
-        canvas.stroke_path(&path, &paint);
+        // //border bottom
+        // let mut path = Path::new();
+        // path.move_to(origin.x, origin.y + size.height);
+        // path.line_to(origin.x + size.width, origin.y + size.height);
+        // let mut paint = Paint::color(border_color.into());
+        // paint.set_line_width(border_size);
+        // canvas.stroke_path(&path, &paint);
 
-        //border left
-        let mut path = Path::new();
-        path.move_to(origin.x, origin.y);
-        path.line_to(origin.x, origin.y + size.height);
-        let mut paint = Paint::color(border_color.left.into());
-        paint.set_line_width(border_size.left);
-        canvas.stroke_path(&path, &paint);
+        // //border left
+        // let mut path = Path::new();
+        // path.move_to(origin.x, origin.y);
+        // path.line_to(origin.x, origin.y + size.height);
+        // let mut paint = Paint::color(border_color.into());
+        // paint.set_line_width(border_size);
+        // canvas.stroke_path(&path, &paint);
     }
 }

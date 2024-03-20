@@ -118,6 +118,16 @@ impl Mul<f32> for Scale {
     }
 }
 
+impl Add<f32> for Scale {
+    type Output = Self;
+    fn add(self, factor: f32) -> Scale {
+        Scale {
+            width: self.width + factor,
+            height: self.height + factor,
+        }
+    }
+}
+
 impl From<[f32; 2]> for Scale {
     fn from(p: [f32; 2]) -> Self {
         unsafe { mem::transmute(p) }

@@ -1,4 +1,7 @@
-use crate::{raw_handle::RawWaylandHandle, types::{Data, PixelSize}};
+use crate::{
+    raw_handle::RawWaylandHandle,
+    types::{Data, PixelSize},
+};
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
 use std::{any::Any, collections::HashMap};
 
@@ -70,4 +73,6 @@ pub trait Window: HasRawWindowHandle + HasRawDisplayHandle + Send + Sync + Any {
     fn has_handle(&self) -> bool {
         true
     }
+
+    fn as_any(&self) -> &dyn Any;
 }

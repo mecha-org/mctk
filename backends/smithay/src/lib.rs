@@ -1,9 +1,9 @@
 mod gl;
-mod pointer;
 pub mod layer;
 pub mod layer_window;
 pub mod lock_surface;
 pub mod lock_window;
+mod pointer;
 
 use mctk_core::component;
 use mctk_core::raw_handle::RawWaylandHandle;
@@ -41,14 +41,21 @@ pub struct WindowOptions {
     pub scale_factor: f32,
 }
 
-
 #[derive(Debug)]
 pub enum WindowMessage {
-    Configure { width: u32, height: u32, wayland_handle: RawWaylandHandle },
+    Configure {
+        width: u32,
+        height: u32,
+        wayland_handle: RawWaylandHandle,
+    },
     MainEventsCleared,
     RedrawRequested,
-    Send { message: component::Message },
-    WindowEvent { event: WindowEvent },
+    Send {
+        message: component::Message,
+    },
+    WindowEvent {
+        event: WindowEvent,
+    },
 }
 #[derive(Debug, Copy, Clone)]
 pub enum WindowEvent {

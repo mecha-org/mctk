@@ -1,7 +1,10 @@
 use std::sync::{Arc, RwLock};
 
 use crate::{
-    gl::{init_gl, init_gl_canvas}, new_raw_wayland_handle, pointer::{convert_button, MouseEvent, Point, ScrollDelta}, PhysicalPosition, WindowEvent, WindowMessage, WindowOptions
+    gl::{init_gl, init_gl_canvas},
+    new_raw_wayland_handle,
+    pointer::{convert_button, MouseEvent, Point, ScrollDelta},
+    PhysicalPosition, WindowEvent, WindowMessage, WindowOptions,
 };
 use anyhow::Context;
 use glutin::api::egl::{self, context::PossiblyCurrentContext};
@@ -193,7 +196,11 @@ impl LayerShellSctkWindow {
 
     pub fn send_configure_event(&mut self, width: u32, height: u32) {
         let wayland_handle = new_raw_wayland_handle(&self.wl_display, &self.layer.wl_surface());
-        let _ = &self.window_tx.send(WindowMessage::Configure { width, height, wayland_handle,  });
+        let _ = &self.window_tx.send(WindowMessage::Configure {
+            width,
+            height,
+            wayland_handle,
+        });
     }
 }
 
@@ -219,6 +226,14 @@ impl CompositorHandler for LayerShellSctkWindow {
             return;
         }
         let _ = self.send_redraw_requested();
+
+        self.layer
+            .wl_surface()
+            .damage_buffer(0, 0, self.width as i32, self.height as i32);
+        self.layer
+            .wl_surface()
+            .frame(qh, self.layer.wl_surface().clone());
+        self.layer.commit();
     }
 
     fn transform_changed(
@@ -267,6 +282,11 @@ impl LayerShellHandler for LayerShellSctkWindow {
         if !self.initial_configure_sent {
             self.send_configure_event(self.width, self.height);
             self.initial_configure_sent = true;
+
+            // request next frame
+            self.layer
+                .wl_surface()
+                .frame(qh, self.layer.wl_surface().clone());
         }
     }
 }

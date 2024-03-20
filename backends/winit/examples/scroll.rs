@@ -1,6 +1,6 @@
 // use mctk_core::{style::HorizontalPosition, widgets::*, *};
 
-use mctk_core::node::Node;
+use mctk_core::{component::RootComponent, node::Node};
 
 #[derive(Debug, Default)]
 pub struct App {}
@@ -169,3 +169,5 @@ fn main() {
 
     println!("bye");
 }
+
+impl RootComponent for App {}

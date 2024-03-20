@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use mctk_core::component::Component;
+use mctk_core::component::{Component, RootComponent};
 use mctk_core::input::{Button, Input, Motion, MouseButton};
 use mctk_core::types::PixelSize;
 use mctk_core::ui::UI;
@@ -31,7 +31,7 @@ impl Window {
         mut fonts: Vec<(String, &'static [u8])>,
         mut assets: Vec<(String, &'static [u8])>,
     ) where
-        A: 'static + Component + Default + Send + Sync,
+        A: 'static + RootComponent + Component + Default + Send + Sync,
     {
         let event_loop = EventLoop::new();
         let window = WindowBuilder::new()
@@ -148,6 +148,10 @@ impl mctk_core::window::Window for Window {
 
     fn svgs(&self) -> HashMap<String, String> {
         self.svgs.clone()
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }
 

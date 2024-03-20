@@ -1,4 +1,8 @@
-use crate::{new_raw_wayland_handle, pointer::{convert_button, MouseEvent, Point, ScrollDelta}, WindowEvent, WindowMessage, WindowOptions
+use crate::{
+    lock_window::SessionLockMessage,
+    new_raw_wayland_handle,
+    pointer::{convert_button, MouseEvent, Point, ScrollDelta},
+    WindowEvent, WindowMessage, WindowOptions,
 };
 use anyhow::Context;
 use mctk_core::raw_handle::RawWaylandHandle;
@@ -7,11 +11,15 @@ use raw_window_handle::{
 };
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
-    delegate_compositor, delegate_keyboard, delegate_output, delegate_pointer,
-    delegate_registry, delegate_seat,
+    delegate_compositor, delegate_keyboard, delegate_output, delegate_pointer, delegate_registry,
+    delegate_seat,
     output::{OutputHandler, OutputState},
     reexports::{
-        calloop::{channel::Sender, EventLoop},
+        calloop::{
+            self,
+            channel::{Channel, Sender},
+            EventLoop,
+        },
         calloop_wayland_source::WaylandSource,
         client::{
             globals::registry_queue_init,
@@ -23,7 +31,12 @@ use smithay_client_toolkit::{
                 wl_surface::WlSurface,
             },
             Connection, Proxy, QueueHandle,
-        }, protocols::ext::session_lock::v1::client::{ext_session_lock_manager_v1::ExtSessionLockManagerV1, ext_session_lock_surface_v1::{self, ExtSessionLockSurfaceV1}, ext_session_lock_v1::{self, ExtSessionLockV1}},
+        },
+        protocols::ext::session_lock::v1::client::{
+            ext_session_lock_manager_v1::ExtSessionLockManagerV1,
+            ext_session_lock_surface_v1::{self, ExtSessionLockSurfaceV1},
+            ext_session_lock_v1::{self, ExtSessionLockV1},
+        },
     },
     registry::{ProvidesRegistryState, RegistryState},
     registry_handlers,
@@ -53,7 +66,7 @@ pub struct SessionLockSctkWindow {
     wl_surface: WlSurface,
     // session lock surface
     // session_lock_manager: ExtSessionLockManagerV1,
-    session_lock: ExtSessionLockV1,
+    pub session_lock: ExtSessionLockV1,
     // session_lock_surface: ExtSessionLockSurfaceV1,
 }
 
@@ -61,6 +74,7 @@ impl SessionLockSctkWindow {
     pub fn new(
         window_tx: Sender<WindowMessage>,
         window_opts: WindowOptions,
+        session_lock_rx: Channel<SessionLockMessage>,
     ) -> anyhow::Result<(Self, EventLoop<'static, Self>)> {
         let conn = Connection::connect_to_env().expect("failed to connect to wayland");
         let wl_display = conn.display();
@@ -85,14 +99,13 @@ impl SessionLockSctkWindow {
         let compositor = CompositorState::bind(&globals, &queue_handle)
             .context("wl_compositor not availible")?;
         let session_lock_manager = globals
-        .bind::<ExtSessionLockManagerV1, _, _>(
-            &queue_handle,
-            core::ops::RangeInclusive::new(1, 1),
-            (),
-        )
-        .map_err(|_| "compositor does not implement ext session lock manager (v1).")
-        .unwrap();
-
+            .bind::<ExtSessionLockManagerV1, _, _>(
+                &queue_handle,
+                core::ops::RangeInclusive::new(1, 1),
+                (),
+            )
+            .map_err(|_| "compositor does not implement ext session lock manager (v1).")
+            .unwrap();
 
         // create the surfacce
         let wl_surface = compositor.create_surface(&queue_handle);
@@ -100,8 +113,7 @@ impl SessionLockSctkWindow {
         let session_lock = session_lock_manager.lock(&queue_handle, ());
         let output = output_state.outputs().next().unwrap();
         // set surface role as session lock surface
-        let _ =
-            session_lock.get_lock_surface(&wl_surface, &output, &queue_handle, ());
+        let _ = session_lock.get_lock_surface(&wl_surface, &output, &queue_handle, ());
 
         // create wayland handle
         let wayland_handle = {
@@ -116,6 +128,21 @@ impl SessionLockSctkWindow {
             RawWaylandHandle(display_handle, window_handle)
         };
 
+        // insert source for session_lock_rx messages
+        let _ = loop_handle.insert_source(session_lock_rx, move |event, _, state| {
+            let _ = match event {
+                // calloop::channel::Event::Msg(msg) => app.app.push_message(msg),
+                calloop::channel::Event::Msg(msg) => {
+                    match msg {
+                        SessionLockMessage::Unlock => {
+                            println!("window unlock");
+                            state.session_lock.unlock_and_destroy();
+                        }
+                    };
+                }
+                calloop::channel::Event::Closed => {}
+            };
+        });
 
         let state = SessionLockSctkWindow {
             // app,
@@ -162,7 +189,11 @@ impl SessionLockSctkWindow {
 
     pub fn send_configure_event(&mut self, width: u32, height: u32) {
         let wayland_handle = new_raw_wayland_handle(&self.wl_display, &self.wl_surface);
-        let _ = &self.window_tx.send(WindowMessage::Configure { width, height, wayland_handle,  });
+        let _ = &self.window_tx.send(WindowMessage::Configure {
+            width,
+            height,
+            wayland_handle,
+        });
     }
 }
 
@@ -188,6 +219,11 @@ impl CompositorHandler for SessionLockSctkWindow {
             return;
         }
         let _ = self.send_redraw_requested();
+
+        self.wl_surface
+            .damage_buffer(0, 0, self.width as i32, self.height as i32);
+        self.wl_surface.frame(qh, self.wl_surface.clone());
+        self.wl_surface.commit();
     }
 
     fn transform_changed(
@@ -440,10 +476,8 @@ impl Dispatch<ExtSessionLockV1, ()> for SessionLockSctkWindow {
         _: &QueueHandle<Self>,
     ) {
         match event {
-            ext_session_lock_v1::Event::Locked => {
-            }
-            ext_session_lock_v1::Event::Finished => {
-            }
+            ext_session_lock_v1::Event::Locked => {}
+            ext_session_lock_v1::Event::Finished => {}
             _ => {}
         }
     }
@@ -468,6 +502,9 @@ impl Dispatch<ExtSessionLockSurfaceV1, ()> for SessionLockSctkWindow {
                     state.send_configure_event(width, height);
                     state.initial_configure_sent = true;
                     surface.ack_configure(serial);
+
+                    // request next frame
+                    state.wl_surface.frame(qh, state.wl_surface.clone());
                 }
             }
             _ => todo!(),

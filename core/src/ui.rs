@@ -1,4 +1,4 @@
-use crate::component::Message;
+use crate::component::{Message, RootComponent};
 use crate::event::{self, Event, EventCache, EventInput};
 use crate::input::*;
 use crate::instrumenting::*;
@@ -88,7 +88,7 @@ thread_local!(
 //     CURRENT_WINDOW.with(|r| unsafe { *r.get().as_mut().unwrap() = Some(window) })
 // }
 
-impl<W: 'static + Window, A: 'static + Component + Default + Send + Sync> UI<W, A> {
+impl<W: 'static + Window, A: 'static + RootComponent + Component + Default + Send + Sync> UI<W, A> {
     fn node_ref(&self) -> RwLockReadGuard<'_, Node> {
         self.node.read().unwrap()
     }
@@ -175,6 +175,7 @@ impl<W: 'static + Window, A: 'static + Component + Default + Send + Sync> UI<W, 
         inst("UI::new");
         let mut component = A::default();
         component.init();
+        component.root(window.as_any());
 
         // let renderer = Arc::new(RwLock::new(Some(ActiveRenderer::new(&window))));
         let renderer = Arc::new(RwLock::new(None));
@@ -190,7 +191,6 @@ impl<W: 'static + Window, A: 'static + Component + Default + Send + Sync> UI<W, 
         let frame_dirty = Arc::new(RwLock::new(false));
         let node_dirty = Arc::new(RwLock::new(true));
         let registrations: Arc<RwLock<Vec<Registration>>> = Default::default();
-
 
         let n = Self {
             renderer,
@@ -288,8 +288,10 @@ impl<W: 'static + Window, A: 'static + Component + Default + Send + Sync> UI<W, 
             if (renderer.is_none()) {
                 return;
             }
-            
-            renderer.as_mut().unwrap()
+
+            renderer
+                .as_mut()
+                .unwrap()
                 .render(&self.node.read().unwrap(), size);
             *frame_dirty.write().unwrap() = false;
             // println!("rendered");
@@ -693,7 +695,6 @@ impl<W: 'static + Window, A: 'static + Component + Default + Send + Sync> UI<W, 
                 }
             }
         }
-        self.window.write().unwrap().redraw(); // Always redraw after handle input
         // clear_immediate_focus();
         inst_end();
     }

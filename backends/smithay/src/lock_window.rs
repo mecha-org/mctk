@@ -1,7 +1,4 @@
-
-use std::collections::HashMap;
-use std::thread;
-use mctk_core::component::{self, Component};
+use mctk_core::component::{self, Component, RootComponent};
 use mctk_core::input::{Button, Input, Motion, MouseButton};
 use mctk_core::raw_handle::RawWaylandHandle;
 use mctk_core::renderer::canvas::CanvasContext;
@@ -9,10 +6,12 @@ use mctk_core::types::PixelSize;
 use mctk_core::ui::UI;
 use pointer::{MouseEvent, ScrollDelta};
 use raw_window_handle::{
-    HasRawDisplayHandle, HasRawWindowHandle, RawDisplayHandle, RawWindowHandle
+    HasRawDisplayHandle, HasRawWindowHandle, RawDisplayHandle, RawWindowHandle,
 };
-use smithay_client_toolkit::reexports::calloop::channel::{Event, Sender};
+use smithay_client_toolkit::reexports::calloop::channel::{Channel, Event, Sender};
 use smithay_client_toolkit::reexports::calloop::{self, EventLoop};
+use std::collections::HashMap;
+use std::thread;
 
 use crate::lock_surface::SessionLockSctkWindow;
 use crate::{layer, pointer, WindowEvent, WindowMessage, WindowOptions};
@@ -26,16 +25,23 @@ pub struct SessionLockWindow {
     fonts: HashMap<String, String>,
     assets: HashMap<String, String>,
     svgs: HashMap<String, String>,
+    session_lock_tx: Sender<SessionLockMessage>,
 }
 unsafe impl Send for SessionLockWindow {}
 unsafe impl Sync for SessionLockWindow {}
 
+#[derive(Debug)]
+pub enum SessionLockMessage {
+    Unlock,
+}
 
 pub struct SessionLockWindowParams {
     pub window_opts: WindowOptions,
     pub fonts: HashMap<String, String>,
     pub assets: HashMap<String, String>,
     pub svgs: HashMap<String, String>,
+    pub session_lock_tx: Sender<SessionLockMessage>,
+    pub session_lock_rx: Channel<SessionLockMessage>,
 }
 
 impl SessionLockWindow {
@@ -47,19 +53,21 @@ impl SessionLockWindow {
         Sender<WindowMessage>,
     )
     where
-        A: 'static + Component + Default + Send + Sync,
+        A: 'static + RootComponent + Component + Default + Send + Sync,
     {
         let SessionLockWindowParams {
             window_opts,
             fonts,
             assets,
-            svgs
+            svgs,
+            session_lock_tx,
+            session_lock_rx,
         } = params;
 
         let (window_tx, window_rx) = calloop::channel::channel();
 
         let (app_window, event_loop) =
-            SessionLockSctkWindow::new(window_tx.clone(), window_opts)
+            SessionLockSctkWindow::new(window_tx.clone(), window_opts, session_lock_rx)
                 .expect("failed to create application");
 
         let mut ui: UI<SessionLockWindow, A> = UI::new(SessionLockWindow {
@@ -71,6 +79,7 @@ impl SessionLockWindow {
             fonts,
             assets,
             svgs,
+            session_lock_tx,
         });
 
         // insert handle
@@ -81,11 +90,15 @@ impl SessionLockWindow {
                 let _ = match ev {
                     calloop::channel::Event::Msg(event) => {
                         match event {
-                            WindowMessage::Configure { width, height, wayland_handle } => {
+                            WindowMessage::Configure {
+                                width,
+                                height,
+                                wayland_handle,
+                            } => {
                                 ui.configure(width, height, wayland_handle);
                                 ui.draw();
                                 ui.render();
-                            },
+                            }
                             WindowMessage::Send { message } => {
                                 ui.update(message);
                             }
@@ -94,6 +107,7 @@ impl SessionLockWindow {
                                 ui.render();
                             }
                             WindowMessage::RedrawRequested => {
+                                ui.handle_input(&Input::Timer);
                                 ui.draw();
                                 ui.render();
                             }
@@ -165,6 +179,10 @@ impl SessionLockWindow {
 
         (app_window, event_loop, window_tx.clone())
     }
+
+    pub fn sender(&self) -> Sender<SessionLockMessage> {
+        self.session_lock_tx.clone()
+    }
 }
 
 impl mctk_core::window::Window for SessionLockWindow {
@@ -213,6 +231,10 @@ impl mctk_core::window::Window for SessionLockWindow {
 
     fn has_handle(&self) -> bool {
         self.handle.is_some()
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }
 

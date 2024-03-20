@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 // mod counter;
-use mctk_core::component::{Component, Message, RenderContext};
+use mctk_core::component::{Component, Message, RenderContext, RootComponent};
 use mctk_core::renderables::{types, Renderable};
 use mctk_core::style::Styled;
 use mctk_core::widgets::Button;
@@ -12,6 +12,7 @@ use mctk_smithay::layer::LayerOptions;
 use mctk_smithay::layer_window::LayerWindowParams;
 use mctk_smithay::lock_window::SessionLockWindowParams;
 use mctk_smithay::WindowOptions;
+use smithay_client_toolkit::reexports::calloop;
 use smithay_client_toolkit::shell::wlr_layer;
 use tracing_subscriber::EnvFilter;
 
@@ -48,23 +49,21 @@ impl Component for App {
     fn view(&self) -> Option<Node> {
         let btn_pressed = self.state_ref().btn_pressed;
 
-        Some(
-            node!(
-                Button::new(txt!("Click me!"))
-                    .on_click(Box::new(|| msg!(HelloEvent::ButtonPressed {
-                        name: "It me, a button!".to_string()
-                    })))
-                    .style(
-                        "background_color",
-                        match btn_pressed {
-                            true => Color::rgb(255., 0., 0.),
-                            false => Color::rgb(0., 0., 255.),
-                        }
-                    )
-                    .style("font_size", 16.0),
-                lay!(size: size!(60.0, 60.0)),
-            )
-        )
+        Some(node!(
+            Button::new(txt!("Click me!"))
+                .on_click(Box::new(|| msg!(HelloEvent::ButtonPressed {
+                    name: "It me, a button!".to_string()
+                })))
+                .style(
+                    "background_color",
+                    match btn_pressed {
+                        true => Color::rgb(255., 0., 0.),
+                        false => Color::rgb(0., 0., 255.),
+                    }
+                )
+                .style("font_size", 16.0),
+            lay!(size: size!(60.0, 60.0)),
+        ))
     }
 
     fn update(&mut self, message: Message) -> Vec<Message> {
@@ -104,13 +103,18 @@ async fn main() -> anyhow::Result<()> {
         scale_factor: 1.0,
     };
 
-    let (mut app, mut event_loop, ..) =
-        mctk_smithay::lock_window::SessionLockWindow::open_blocking::<App>(SessionLockWindowParams {
-            window_opts,
-            fonts,
-            assets,
-            svgs,
-        });
+    let (session_lock_tx, session_lock_rx) = calloop::channel::channel();
+
+    let (mut app, mut event_loop, ..) = mctk_smithay::lock_window::SessionLockWindow::open_blocking::<
+        App,
+    >(SessionLockWindowParams {
+        window_opts,
+        fonts,
+        assets,
+        svgs,
+        session_lock_tx,
+        session_lock_rx,
+    });
     loop {
         event_loop
             .dispatch(Duration::from_millis(16), &mut app)
@@ -119,3 +123,5 @@ async fn main() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+impl RootComponent for App {}

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 // mod counter;
-use mctk_core::component::{Component, Message, RenderContext};
+use mctk_core::component::{Component, Message, RenderContext, RootComponent};
 use mctk_core::renderables::{types, Renderable};
 use mctk_core::style::Styled;
 use mctk_core::widgets::Button;
@@ -47,23 +47,21 @@ impl Component for App {
     fn view(&self) -> Option<Node> {
         let btn_pressed = self.state_ref().btn_pressed;
 
-        Some(
-            node!(
-                Button::new(txt!("Click me!"))
-                    .on_click(Box::new(|| msg!(HelloEvent::ButtonPressed {
-                        name: "It me, a button!".to_string()
-                    })))
-                    .style(
-                        "background_color",
-                        match btn_pressed {
-                            true => Color::rgb(255., 0., 0.),
-                            false => Color::rgb(0., 0., 255.),
-                        }
-                    )
-                    .style("font_size", 16.0),
-                lay!(size: size!(60.0, 60.0)),
-            )
-        )
+        Some(node!(
+            Button::new(txt!("Click me!"))
+                .on_click(Box::new(|| msg!(HelloEvent::ButtonPressed {
+                    name: "It me, a button!".to_string()
+                })))
+                .style(
+                    "background_color",
+                    match btn_pressed {
+                        true => Color::rgb(255., 0., 0.),
+                        false => Color::rgb(0., 0., 255.),
+                    }
+                )
+                .style("font_size", 16.0),
+            lay!(size: size!(60.0, 60.0)),
+        ))
     }
 
     fn update(&mut self, message: Message) -> Vec<Message> {
@@ -131,3 +129,5 @@ async fn main() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+impl RootComponent for App {}
