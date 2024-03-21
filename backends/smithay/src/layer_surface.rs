@@ -1,33 +1,9 @@
-use std::sync::{Arc, RwLock};
-
-use crate::{
-    gl::{init_gl, init_gl_canvas},
-    new_raw_wayland_handle,
-    pointer::{convert_button, MouseEvent, Point, ScrollDelta},
-    PhysicalPosition, WindowEvent, WindowMessage, WindowOptions,
+use crate::{keyboard::KeyboardEvent, new_raw_wayland_handle, pointer::{convert_button, MouseEvent, Point, ScrollDelta}, touch::{Position, TouchEvent, TouchPoint}, PhysicalPosition, WindowEvent, WindowMessage, WindowOptions
 };
+use ahash::AHashMap;
 use anyhow::Context;
-use glutin::api::egl::{self, context::PossiblyCurrentContext};
-use mctk_core::{
-    raw_handle::RawWaylandHandle,
-    reexports::{
-        femtovg::{self, Color},
-        glutin::{
-            self,
-            surface::{GlSurface, WindowSurface},
-        },
-    },
-    renderer::canvas::CanvasContext,
-};
-use raw_window_handle::{
-    RawDisplayHandle, RawWindowHandle, WaylandDisplayHandle, WaylandWindowHandle,
-};
 use smithay_client_toolkit::{
-    compositor::{CompositorHandler, CompositorState},
-    delegate_compositor, delegate_keyboard, delegate_layer, delegate_output, delegate_pointer,
-    delegate_registry, delegate_seat,
-    output::{OutputHandler, OutputState},
-    reexports::{
+    compositor::{CompositorHandler, CompositorState}, delegate_compositor, delegate_keyboard, delegate_layer, delegate_output, delegate_pointer, delegate_registry, delegate_seat, delegate_touch, output::{OutputHandler, OutputState}, reexports::{
         calloop::{channel::Sender, EventLoop},
         calloop_wayland_source::WaylandSource,
         client::{
@@ -39,22 +15,16 @@ use smithay_client_toolkit::{
                 wl_seat::WlSeat,
                 wl_surface::WlSurface,
             },
-            Connection, Proxy, QueueHandle,
+            Connection, QueueHandle,
         },
-    },
-    registry::{ProvidesRegistryState, RegistryState},
-    registry_handlers,
-    seat::{
-        keyboard::{KeyEvent, KeyboardHandler, Keysym, Modifiers},
-        pointer::{PointerEvent, PointerEventKind, PointerHandler},
-        Capability, SeatHandler, SeatState,
-    },
-    shell::{
+    }, registry::{ProvidesRegistryState, RegistryState}, registry_handlers, seat::{
+        keyboard::{KeyEvent, KeyboardHandler, Keysym, Modifiers}, pointer::{PointerEvent, PointerEventKind, PointerHandler}, touch::TouchHandler, Capability, SeatHandler, SeatState
+    }, shell::{
         wlr_layer::{self, LayerShell, LayerShellHandler, LayerSurface},
         WaylandSurface,
-    },
+    }
 };
-use wayland_client::protocol::wl_display::WlDisplay;
+use wayland_client::protocol::{wl_display::WlDisplay, wl_touch::{self, WlTouch}};
 
 pub struct LayerShellSctkWindow {
     window_tx: Sender<WindowMessage>,
@@ -69,6 +39,8 @@ pub struct LayerShellSctkWindow {
     keyboard_focus: bool,
     keyboard_modifiers: Modifiers,
     pointer: Option<wl_pointer::WlPointer>,
+    touch: Option<wl_touch::WlTouch>,
+    touch_map: AHashMap<i32, TouchPoint>,
     initial_configure_sent: bool,
     pub scale_factor: f32,
     exit: bool,
@@ -146,6 +118,8 @@ impl LayerShellSctkWindow {
             keyboard_focus: false,
             keyboard_modifiers: Modifiers::default(),
             pointer: None,
+            touch: None,
+            touch_map: AHashMap::new(),
             initial_configure_sent: false,
             scale_factor,
             exit: false,
@@ -266,7 +240,7 @@ impl LayerShellHandler for LayerShellSctkWindow {
         _qh: &QueueHandle<Self>,
         _layer: &wlr_layer::LayerSurface,
     ) {
-        let _ = &self.send_close_requested();
+        let _ = self.send_close_requested();
         self.exit = true;
     }
 
@@ -274,7 +248,7 @@ impl LayerShellHandler for LayerShellSctkWindow {
         &mut self,
         _conn: &Connection,
         qh: &QueueHandle<Self>,
-        layer: &wlr_layer::LayerSurface,
+        _: &wlr_layer::LayerSurface,
         _: wlr_layer::LayerSurfaceConfigure,
         _serial: u32,
     ) {
@@ -313,6 +287,10 @@ impl SeatHandler for LayerShellSctkWindow {
             let pointer = self.seat_state.get_pointer(qh, &seat).unwrap();
             self.pointer = Some(pointer);
         }
+        if capability == Capability::Touch && self.touch.is_none() {
+            let touch = self.seat_state.get_touch(qh, &seat).unwrap();
+            self.touch = Some(touch);
+        }
     }
 
     fn remove_capability(
@@ -346,13 +324,14 @@ impl KeyboardHandler for LayerShellSctkWindow {
         surface: &WlSurface,
         _serial: u32,
         _raw: &[u32],
-        _keysyms: &[Keysym],
+        _: &[Keysym],
     ) {
         if self.layer.wl_surface() != surface {
             return;
         }
 
         self.keyboard_focus = true;
+        self.send_window_event(WindowEvent::Focused);
     }
 
     fn leave(
@@ -368,6 +347,7 @@ impl KeyboardHandler for LayerShellSctkWindow {
         }
 
         self.keyboard_focus = false;
+        self.send_window_event(WindowEvent::Unfocused);
     }
 
     fn press_key(
@@ -381,41 +361,8 @@ impl KeyboardHandler for LayerShellSctkWindow {
         if !self.keyboard_focus {
             return;
         }
-
-        // let Some(keycode) = crate::layer_shell::keyboard::keysym_to_keycode(event.keysym) else {
-        //     return;
-        // };
-
-        // let mut modifiers = keyboard::Modifiers::default();
-
-        // let Modifiers {
-        //     ctrl,
-        //     alt,
-        //     shift,
-        //     caps_lock: _,
-        //     logo,
-        //     num_lock: _,
-        // } = &self.keyboard_modifiers;
-
-        // if *ctrl {
-        //     modifiers |= keyboard::Modifiers::CTRL;
-        // }
-        // if *alt {
-        //     modifiers |= keyboard::Modifiers::ALT;
-        // }
-        // if *shift {
-        //     modifiers |= keyboard::Modifiers::SHIFT;
-        // }
-        // if *logo {
-        //     modifiers |= keyboard::Modifiers::LOGO;
-        // }
-
-        // let event = Event::Keyboard(keyboard::KeyboardEvent::KeyPressed {
-        //     key_code: keycode,
-        //     modifiers,
-        // });
-
-        // let _ = &self.app.push_event(event);
+        let key = event.keysym;
+        self.send_window_event(WindowEvent::Keyboard(KeyboardEvent::KeyPressed { key }))
     }
 
     fn release_key(
@@ -430,40 +377,8 @@ impl KeyboardHandler for LayerShellSctkWindow {
             return;
         }
 
-        // let Some(keycode) = crate::layer_shell::keyboard::keysym_to_keycode(event.keysym) else {
-        //     return;
-        // };
-
-        // let mut modifiers = keyboard::Modifiers::default();
-
-        // let Modifiers {
-        //     ctrl,
-        //     alt,
-        //     shift,
-        //     caps_lock: _,
-        //     logo,
-        //     num_lock: _,
-        // } = &self.keyboard_modifiers;
-
-        // if *ctrl {
-        //     modifiers |= keyboard::Modifiers::CTRL;
-        // }
-        // if *alt {
-        //     modifiers |= keyboard::Modifiers::ALT;
-        // }
-        // if *shift {
-        //     modifiers |= keyboard::Modifiers::SHIFT;
-        // }
-        // if *logo {
-        //     modifiers |= keyboard::Modifiers::LOGO;
-        // }
-
-        // let event = Event::Keyboard(keyboard::KeyboardEvent::KeyReleased {
-        //     key_code: keycode,
-        //     modifiers,
-        // });
-
-        // let _ = &self.app.push_event(event);
+        let key = event.keysym;
+        self.send_window_event(WindowEvent::Keyboard(KeyboardEvent::KeyReleased { key }))
     }
 
     fn update_modifiers(
@@ -544,8 +459,126 @@ impl PointerHandler for LayerShellSctkWindow {
                 }
             };
 
-            let _ = &self.send_window_event(window_event);
+            let _ = self.send_window_event(window_event);
         }
+    }
+}
+
+impl TouchHandler for LayerShellSctkWindow {
+    fn down(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &WlTouch,
+        _: u32,
+        time: u32,
+        surface: WlSurface,
+        id: i32,
+        position: (f64, f64),
+    ) {
+        if self.layer.wl_surface() != &surface {
+            return;
+        }
+        let scale_factor = self.scale_factor;
+
+        // insert the touch point
+        self.touch_map.insert(id, TouchPoint { surface, position: Position { x: position.0 as f32, y: position.1 as f32 } });
+
+        self.send_window_event(WindowEvent::Touch(TouchEvent::Down {
+            id,
+            time,
+            position: Position { x: position.0 as f32, y: position.1 as f32 },
+            scale_factor,
+        }));
+    }
+
+    fn up(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &WlTouch,
+        _: u32,
+        time: u32,
+        id: i32,
+    ) {
+        let scale_factor = self.scale_factor;
+        let touch_point = match self.touch_map.remove(&id) {
+            Some(touch_point) => touch_point,
+            None => return,
+        };
+
+        self.send_window_event(WindowEvent::Touch(TouchEvent::Up {
+            id,
+            time,
+            position: Position { x: touch_point.position.x, y: touch_point.position.y },
+            scale_factor,
+        }));
+    }
+
+    fn motion(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &WlTouch,
+        time: u32,
+        id: i32,
+        position: (f64, f64),
+    ) {
+        let scale_factor = self.scale_factor;
+        let touch_point = match self.touch_map.get_mut(&id) {
+            Some(touch_point) => touch_point,
+            None => return,
+        };
+
+        touch_point.position = Position { x: position.0 as f32, y: position.1 as f32 };
+        self.send_window_event(WindowEvent::Touch(TouchEvent::Motion {
+            id,
+            time,
+            position: Position { x: position.0 as f32, y: position.0 as f32 },
+            scale_factor,
+        }));
+    }
+
+    fn shape(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &WlTouch,
+        _: i32,
+        _: f64,
+        _: f64,
+    ) {
+        // blank
+    }
+
+    fn orientation(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &WlTouch,
+        _: i32,
+        _: f64,
+    ) {
+        // blank
+    }
+
+    fn cancel(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &WlTouch
+    ) {
+        let scale_factor = self.scale_factor;
+        for (id, tp) in self.touch_map.clone().into_iter() {
+            let touch_point = tp.clone();
+            self.send_window_event(WindowEvent::Touch(TouchEvent::Cancel { 
+                id,
+                position: Position { x: touch_point.position.x, y: touch_point.position.y },
+                scale_factor,
+            }));
+        }
+
+        self.touch_map.drain();
     }
 }
 
@@ -562,5 +595,6 @@ delegate_output!(LayerShellSctkWindow);
 delegate_seat!(LayerShellSctkWindow);
 delegate_keyboard!(LayerShellSctkWindow);
 delegate_pointer!(LayerShellSctkWindow);
+delegate_touch!(LayerShellSctkWindow);
 delegate_layer!(LayerShellSctkWindow);
 delegate_registry!(LayerShellSctkWindow);

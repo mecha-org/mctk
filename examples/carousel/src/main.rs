@@ -22,7 +22,7 @@ use mctk_core::widgets::{self, Button, Carousel, Div, Image, Svg};
 use mctk_core::{lay, layout, msg, rect, size, size_pct, txt, Color};
 use mctk_core::{node, node::Node};
 use mctk_macros::{component, state_component_impl};
-use mctk_smithay::layer::LayerOptions;
+use mctk_smithay::layer_surface::LayerOptions;
 use mctk_smithay::layer_window::LayerWindowParams;
 use mctk_smithay::WindowOptions;
 use tracing::info;
