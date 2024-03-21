@@ -457,9 +457,9 @@ impl Node {
         event: &mut Event<E>,
         handler: fn(&mut Self, &mut Event<E>),
     ) {
-        let mut nodes_under = self.nodes_under(event);
+        let mut nodes_under = self.nodes_under(event, false);
         while !nodes_under.is_empty() && event.bubbles {
-            self._handle_event_under_mouse(event, handler, &mut nodes_under);
+            self._handle_event_under_mouse(event, handler, &mut nodes_under, false);
         }
     }
 
@@ -468,17 +468,25 @@ impl Node {
         event: &mut Event<E>,
         handler: fn(&mut Self, &mut Event<E>),
         node_order: &mut Vec<(u64, f32)>,
+        use_touch: bool,
     ) -> Vec<Message> {
+        let mut event_target_position = event.mouse_position;
+
+        // switch to touch position
+        if use_touch {
+            event_target_position = event.touch_position;
+        }
+
         let mut m: Vec<Message> = vec![];
         event.over_child_n = None;
         event.over_subchild_n = None;
         for (n, child) in self.children.iter_mut().enumerate() {
             if child
                 .component
-                .is_mouse_maybe_over(event.mouse_position, child.inclusive_aabb)
+                .is_mouse_maybe_over(event_target_position, child.inclusive_aabb)
             {
                 for message in child
-                    ._handle_event_under_mouse(event, handler, node_order)
+                    ._handle_event_under_mouse(event, handler, node_order, use_touch)
                     .drain(..)
                 {
                     m.append(&mut self.component.update(message));
@@ -488,7 +496,7 @@ impl Node {
                 }
                 if child
                     .component
-                    .is_mouse_over(event.mouse_position, child.aabb)
+                    .is_mouse_over(event_target_position, child.aabb)
                 {
                     event.over_subchild_n = event.over_child_n;
                     event.over_child_n = Some(n);
@@ -501,7 +509,7 @@ impl Node {
             && Some(self.id) == node_order.last().map(|x| x.0)
             && self
                 .component
-                .is_mouse_over(event.mouse_position, self.aabb)
+                .is_mouse_over(event_target_position, self.aabb)
         {
             node_order.pop();
             event.current_node_id = Some(self.id);
@@ -531,87 +539,43 @@ impl Node {
         event: &mut Event<E>,
         handler: fn(&mut Self, &mut Event<E>),
     ) {
-        let mut nodes_under = self.nodes_under(event);
+        let mut nodes_under = self.nodes_under(event, true);
         while !nodes_under.is_empty() && event.bubbles {
-            self._handle_event_under_touch(event, handler, &mut nodes_under);
+            self._handle_event_under_mouse(event, handler, &mut nodes_under, true);
         }
     }
 
-    fn _handle_event_under_touch<E: EventInput>(
-        &mut self,
-        event: &mut Event<E>,
-        handler: fn(&mut Self, &mut Event<E>),
-        node_order: &mut Vec<(u64, f32)>,
-    ) -> Vec<Message> {
-        let mut m: Vec<Message> = vec![];
-        event.over_child_n = None;
-        event.over_subchild_n = None;
-        for (n, child) in self.children.iter_mut().enumerate() {
-            if child
-                .component
-                .is_mouse_maybe_over(event.touch_position, child.inclusive_aabb)
-            {
-                for message in child
-                    ._handle_event_under_touch(event, handler, node_order)
-                    .drain(..)
-                {
-                    m.append(&mut self.component.update(message));
-                    if self.component.is_dirty() {
-                        event.dirty();
-                    }
-                }
-                if child
-                    .component
-                    .is_touch_over(event.touch_position, child.aabb)
-                {
-                    event.over_subchild_n = event.over_child_n;
-                    event.over_child_n = Some(n);
-                    event.over_child_n_aabb = Some(child.aabb);
-                }
-            }
-        }
-
-        if event.bubbles
-            && Some(self.id) == node_order.last().map(|x| x.0)
-            && self
-                .component
-                .is_touch_over(event.touch_position, self.aabb)
-        {
-            node_order.pop();
-            event.current_node_id = Some(self.id);
-            event.current_aabb = Some(self.aabb);
-            event.current_inner_scale = self.inner_scale;
-            handler(self, event);
-            if self.component.is_dirty() {
-                event.dirty();
-            }
-            m.append(&mut event.messages);
-        } else if Some(self.id) == node_order.last().map(|x| x.0) {
-            node_order.pop();
-        }
-
-        m
-    }
-
-    fn nodes_under<E: EventInput>(&self, event: &Event<E>) -> Vec<(u64, f32)> {
+    fn nodes_under<E: EventInput>(&self, event: &Event<E>, use_touch: bool) -> Vec<(u64, f32)> {
         let mut collector: Vec<(u64, f32)> = vec![];
 
-        self._nodes_under(event, &mut collector);
+        self._nodes_under(event, &mut collector, use_touch);
         // Maybe TODO: Discard siblings?
         collector.sort_by(|(m, _), (n, _)| m.partial_cmp(n).unwrap());
         collector
     }
 
-    fn _nodes_under<E: EventInput>(&self, event: &Event<E>, collector: &mut Vec<(u64, f32)>) {
+    fn _nodes_under<E: EventInput>(
+        &self,
+        event: &Event<E>,
+        collector: &mut Vec<(u64, f32)>,
+        use_touch: bool,
+    ) {
+        let mut event_target_position = event.mouse_position;
+
+        // switch to touch position
+        if use_touch {
+            event_target_position = event.touch_position;
+        }
+
         if self
             .component
-            .is_mouse_over(event.mouse_position, self.aabb)
+            .is_mouse_over(event_target_position, self.aabb)
         {
             collector.push((self.id, self.aabb.pos.z))
         }
 
         let is_mouse_over = self.component.is_mouse_over(
-            event.mouse_position,
+            event_target_position,
             self.component.frame_bounds(self.aabb, self.inner_scale),
         );
 
@@ -622,9 +586,9 @@ impl Node {
         for child in self.children.iter() {
             if child
                 .component
-                .is_mouse_maybe_over(event.mouse_position, child.inclusive_aabb)
+                .is_mouse_maybe_over(event_target_position, child.inclusive_aabb)
             {
-                child._nodes_under(event, collector);
+                child._nodes_under(event, collector, use_touch);
             }
         }
     }
@@ -811,8 +775,16 @@ impl Node {
         self.handle_event_under_mouse(event, |node, e| node.component.on_click(e));
     }
 
+    pub(crate) fn tap(&mut self, event: &mut Event<event::Click>) {
+        self.handle_event_under_touch(event, |node, e| node.component.on_click(e));
+    }
+
     pub(crate) fn double_click(&mut self, event: &mut Event<event::DoubleClick>) {
         self.handle_event_under_mouse(event, |node, e| node.component.on_double_click(e));
+    }
+
+    pub(crate) fn double_tap(&mut self, event: &mut Event<event::DoubleClick>) {
+        self.handle_event_under_touch(event, |node, e| node.component.on_double_click(e));
     }
 
     pub(crate) fn focus(&mut self, event: &mut Event<event::Focus>) {
@@ -850,7 +822,7 @@ impl Node {
     pub(crate) fn touch_cancel(&mut self, event: &mut Event<event::TouchCancel>) {
         self.handle_targeted_event(event, |node, e| node.component.on_touch_cancel(e));
     }
-    
+
     pub(crate) fn text_entry(&mut self, event: &mut Event<event::TextEntry>) {
         self.handle_targeted_event(event, |node, e| node.component.on_text_entry(e));
     }

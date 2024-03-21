@@ -265,9 +265,7 @@ async fn main() -> anyhow::Result<()> {
     //     // event_loop.d
     // })
     loop {
-        event_loop
-            .dispatch(Duration::from_millis(16), &mut app)
-            .unwrap();
+        event_loop.dispatch(None, &mut app).unwrap();
     }
 
     // let window_opts = WindowOptions {

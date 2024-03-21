@@ -9,7 +9,7 @@ use crate::component::Message;
 // use crate::ui::focus_immediately;
 
 /// How much time (ms) can elapse between clicks before it's no longer considered a double click.
-pub const DOUBLE_CLICK_INTERVAL_MS: u128 = 500; // ms
+pub const DOUBLE_CLICK_INTERVAL_MS: u128 = 250; // ms
 /// How much mouse travel (px) is allowed before it's no longer considered a double click.
 pub const DOUBLE_CLICK_MAX_DIST: f32 = 10.0; // px
 /// How much distance (px) is required before we start a drag event.
@@ -529,6 +529,8 @@ pub(crate) struct EventCache {
     pub modifiers_held: ModifiersHeld,
     pub mouse_buttons_held: MouseButtonsHeld,
     pub touch_held: bool,
+    pub last_touch_position: Point,
+    pub last_touch_down: Instant,
     pub touch_position: Point,
     pub mouse_over: Option<u64>,
     pub mouse_position: Point,
@@ -574,6 +576,8 @@ impl EventCache {
             last_mouse_click: Instant::now(),
             last_mouse_click_position: Default::default(),
             touch_held: false,
+            last_touch_position: Default::default(),
+            last_touch_down: Instant::now(),
             touch_position: Default::default(),
             drag_button: None,
             drag_started: None,
@@ -697,6 +701,11 @@ impl EventCache {
 
     pub(crate) fn touch_moved(&mut self, x: f32, y: f32) {
         self.touch_held = true;
+        self.touch_position = Point::new(x, y);
+    }
+
+    pub(crate) fn touch_cancel(&mut self, x: f32, y: f32) {
+        self.touch_held = false;
         self.touch_position = Point::new(x, y);
     }
 }
