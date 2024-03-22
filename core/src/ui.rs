@@ -548,46 +548,68 @@ impl<W: 'static + Window, A: 'static + RootComponent + Component + Default + Sen
                 self.handle_event(Node::key_up, &mut event, focus);
             }
             Input::Touch(TouchAction::Down { x, y }) => {
-                self.event_cache.touch_down(*x, *y);
-                let mut event = Event::new(
-                    event::TouchDown {
-                        x: *x * self.event_cache.scale_factor,
-                        y: *y * self.event_cache.scale_factor,
-                    },
-                    &self.event_cache,
-                );
+                let pos = Point::new(*x, *y) * self.event_cache.scale_factor;
+                self.event_cache.touch_down(pos.x, pos.y);
+                let mut event =
+                    Event::new(event::TouchDown { x: pos.x, y: pos.y }, &self.event_cache);
                 self.handle_event(Node::touch_down, &mut event, None);
-            },
+            }
             Input::Touch(TouchAction::Up { x, y }) => {
-                let mut event = Event::new(
-                    event::TouchUp {
-                        x: *x * self.event_cache.scale_factor,
-                        y: *y * self.event_cache.scale_factor,
-                    },
-                    &self.event_cache,
-                );
+                let pos = Point::new(*x, *y) * self.event_cache.scale_factor;
+                let mut event =
+                    Event::new(event::TouchUp { x: pos.x, y: pos.y }, &self.event_cache);
                 self.handle_event(Node::touch_up, &mut event, None);
-            },
+
+                let mut is_double_tap = false;
+                // Double clicking
+                if self.event_cache.last_touch_down.elapsed().as_millis()
+                    < event::DOUBLE_CLICK_INTERVAL_MS
+                    && self.event_cache.last_touch_position.dist(pos) < event::DOUBLE_CLICK_MAX_DIST
+                {
+                    is_double_tap = true;
+                }
+                self.event_cache.last_touch_down = Instant::now();
+                self.event_cache.last_touch_position = pos;
+
+                // End drag
+                if self.event_cache.touch_held {
+                    // Resolve click
+                    self.event_cache.touch_up(pos.x, pos.y);
+                    let event_current_node_id = if is_double_tap {
+                        let mut event =
+                            Event::new(event::DoubleClick(MouseButton::Left), &self.event_cache);
+                        self.handle_event(Node::double_tap, &mut event, None);
+                        event.current_node_id
+                    } else {
+                        let mut event =
+                            Event::new(event::Click(MouseButton::Left), &self.event_cache);
+                        self.handle_event(Node::tap, &mut event, None);
+                        event.current_node_id
+                    };
+
+                    // Unfocus when clicking a thing not focused
+                    if event_current_node_id != Some(self.event_cache.focus)
+                        // Ignore the root node, which is the default focus
+                            && self.event_cache.focus != self.node_ref().id
+                    {
+                        self.blur();
+                    }
+                }
+            }
             Input::Touch(TouchAction::Moved { x, y }) => {
-                let mut event = Event::new(
-                    event::TouchMoved {
-                        x: *x * self.event_cache.scale_factor,
-                        y: *y * self.event_cache.scale_factor,
-                    },
-                    &self.event_cache,
-                );
+                let pos = Point::new(*x, *y) * self.event_cache.scale_factor;
+                let mut event =
+                    Event::new(event::TouchMoved { x: pos.x, y: pos.y }, &self.event_cache);
+                self.event_cache.touch_moved(pos.x, pos.y);
                 self.handle_event(Node::touch_moved, &mut event, None);
-            },
+            }
             Input::Touch(TouchAction::Cancel { x, y }) => {
-                let mut event = Event::new(
-                    event::TouchCancel {
-                        x: *x * self.event_cache.scale_factor,
-                        y: *y * self.event_cache.scale_factor,
-                    },
-                    &self.event_cache,
-                );
+                let pos = Point::new(*x, *y) * self.event_cache.scale_factor;
+                let mut event =
+                    Event::new(event::TouchCancel { x: pos.x, y: pos.y }, &self.event_cache);
+                self.event_cache.touch_cancel(pos.x, pos.y);
                 self.handle_event(Node::touch_cancel, &mut event, None);
-            },
+            }
             Input::Text(s) => {
                 let mods = self.event_cache.modifiers_held;
                 if !mods.alt && !mods.ctrl && !mods.meta {

@@ -121,10 +121,10 @@ impl SessionLockWindow {
                                     }
                                     WindowEvent::Focused => {
                                         ui.handle_input(&Input::Focus(true));
-                                    },
+                                    }
                                     WindowEvent::Unfocused => {
                                         ui.handle_input(&Input::Focus(false));
-                                    },
+                                    }
                                     WindowEvent::Mouse(m_event) => match m_event {
                                         MouseEvent::CursorEntered => {
                                             ui.handle_input(&Input::MouseEnterWindow);
@@ -177,32 +177,52 @@ impl SessionLockWindow {
                                             ui.handle_input(&Input::Motion(scroll));
                                         }
                                     },
-                                    WindowEvent::Keyboard(k_ev) => {
-                                        match k_ev {
-                                            KeyboardEvent::KeyPressed { key } => {
-                                                ui.handle_input(&Input::Press(Button::Keyboard(keysym_to_key(key))));
-                                            },
-                                            KeyboardEvent::KeyReleased { key } => {
-                                                ui.handle_input(&Input::Release(Button::Keyboard(keysym_to_key(key))));
-                                            }
+                                    WindowEvent::Keyboard(k_ev) => match k_ev {
+                                        KeyboardEvent::KeyPressed { key } => {
+                                            ui.handle_input(&Input::Press(Button::Keyboard(
+                                                keysym_to_key(key),
+                                            )));
+                                        }
+                                        KeyboardEvent::KeyReleased { key } => {
+                                            ui.handle_input(&Input::Release(Button::Keyboard(
+                                                keysym_to_key(key),
+                                            )));
                                         }
                                     },
-                                    WindowEvent::Touch(t_ev) => {
-                                        match t_ev {
-                                            TouchEvent::Up { position, scale_factor, .. } => {
-                                                ui.handle_input(&Input::Touch(TouchAction::Up { x: position.x / scale_factor, y: position.y / scale_factor }))
-                                            },
-                                            TouchEvent::Down { position, scale_factor, .. } => {
-                                                ui.handle_input(&Input::Touch(TouchAction::Down { x: position.x / scale_factor, y: position.y / scale_factor }))
-                                            },
-                                            TouchEvent::Motion { position, scale_factor, .. } => {
-                                                ui.handle_input(&Input::Touch(TouchAction::Moved { x: position.x / scale_factor, y: position.y / scale_factor }))
-                                            },
-                                            TouchEvent::Cancel { position, scale_factor, .. } => {
-                                                ui.handle_input(&Input::Touch(TouchAction::Cancel { x: position.x / scale_factor, y: position.y / scale_factor }))
-                                            },
-                                        }
-                                    }
+                                    WindowEvent::Touch(t_ev) => match t_ev {
+                                        TouchEvent::Up {
+                                            position,
+                                            scale_factor,
+                                            ..
+                                        } => ui.handle_input(&Input::Touch(TouchAction::Up {
+                                            x: position.x / scale_factor,
+                                            y: position.y / scale_factor,
+                                        })),
+                                        TouchEvent::Down {
+                                            position,
+                                            scale_factor,
+                                            ..
+                                        } => ui.handle_input(&Input::Touch(TouchAction::Down {
+                                            x: position.x / scale_factor,
+                                            y: position.y / scale_factor,
+                                        })),
+                                        TouchEvent::Motion {
+                                            position,
+                                            scale_factor,
+                                            ..
+                                        } => ui.handle_input(&Input::Touch(TouchAction::Moved {
+                                            x: position.x / scale_factor,
+                                            y: position.y / scale_factor,
+                                        })),
+                                        TouchEvent::Cancel {
+                                            position,
+                                            scale_factor,
+                                            ..
+                                        } => ui.handle_input(&Input::Touch(TouchAction::Cancel {
+                                            x: position.x / scale_factor,
+                                            y: position.y / scale_factor,
+                                        })),
+                                    },
                                 }
                             }
                         }
@@ -221,7 +241,6 @@ impl SessionLockWindow {
 }
 
 impl mctk_core::window::Window for SessionLockWindow {
-
     fn logical_size(&self) -> PixelSize {
         PixelSize {
             width: self.width,

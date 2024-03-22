@@ -21,6 +21,7 @@ struct ButtonState {
 pub struct Button {
     pub label: Vec<TextSegment>,
     pub on_click: Option<Box<dyn Fn() -> Message + Send + Sync>>,
+    pub on_double_click: Option<Box<dyn Fn() -> Message + Send + Sync>>,
     pub tool_tip: Option<String>,
 }
 
@@ -37,6 +38,7 @@ impl Button {
         Self {
             label,
             on_click: None,
+            on_double_click: None,
             tool_tip: None,
             state: Some(ButtonState::default()),
             dirty: false,
@@ -47,6 +49,11 @@ impl Button {
 
     pub fn on_click(mut self, f: Box<dyn Fn() -> Message + Send + Sync>) -> Self {
         self.on_click = Some(f);
+        self
+    }
+
+    pub fn on_double_click(mut self, f: Box<dyn Fn() -> Message + Send + Sync>) -> Self {
+        self.on_double_click = Some(f);
         self
     }
 
@@ -155,6 +162,20 @@ impl Component for Button {
 
     fn on_click(&mut self, event: &mut event::Event<event::Click>) {
         if let Some(f) = &self.on_click {
+            event.emit(f());
+        }
+    }
+
+    fn on_touch_down(&mut self, event: &mut event::Event<event::TouchDown>) {
+        self.state_mut().pressed = true;
+    }
+
+    fn on_touch_up(&mut self, _event: &mut event::Event<event::TouchUp>) {
+        self.state_mut().pressed = false;
+    }
+
+    fn on_double_click(&mut self, event: &mut event::Event<event::DoubleClick>) {
+        if let Some(f) = &self.on_double_click {
             event.emit(f());
         }
     }

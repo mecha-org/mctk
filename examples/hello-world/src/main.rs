@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 // mod counter;
 use mctk_core::component::{Component, Message, RenderContext, RootComponent};
+use mctk_core::event::{self, Event};
 use mctk_core::renderables::{types, Renderable};
 use mctk_core::style::Styled;
 use mctk_core::widgets::Button;
@@ -50,15 +51,13 @@ impl Component for App {
         Some(node!(
             Button::new(txt!("Click me!"))
                 .on_click(Box::new(|| msg!(HelloEvent::ButtonPressed {
-                    name: "It me, a button!".to_string()
+                    name: "Clicked".to_string()
                 })))
-                .style(
-                    "background_color",
-                    match btn_pressed {
-                        true => Color::rgb(255., 0., 0.),
-                        false => Color::rgb(0., 0., 255.),
-                    }
-                )
+                .on_double_click(Box::new(|| msg!(HelloEvent::ButtonPressed {
+                    name: "Double clicked".to_string()
+                })))
+                .style("background_color", Color::rgb(0., 0., 255.))
+                .style("active_color", Color::rgb(255., 0., 0.))
                 .style("font_size", 16.0),
             lay!(size: size!(60.0, 60.0)),
         ))

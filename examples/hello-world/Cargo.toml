@@ -3,6 +3,7 @@ name = "hello-world"
 version = "0.1.0"
 edition = "2021"
 publish = false
+authors = ["Akshay Raina <akshayr@mechasystems.com", "Shoaib Merchant <shoaibm@mechasystems.com>"]
 
 [dependencies]
 mctk_core = { path = "../../core", version = "0.1.0" }

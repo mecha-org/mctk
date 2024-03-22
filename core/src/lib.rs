@@ -1,7 +1,6 @@
 pub mod component;
 pub mod event;
 pub mod font_cache;
-pub mod input;
 pub mod instrumenting;
 pub mod pointer;
 pub mod raw_handle;
@@ -38,3 +37,6 @@ pub use mctk_macros::{component, state_component_impl};
 #[macro_use]
 pub mod node;
 pub use node::*;
+
+pub mod input;
+pub use input::*;
