@@ -1,23 +1,23 @@
-use std::collections::HashMap;
-
-use super::types;
 use super::types::Canvas;
-use crate::types::{Color, Point, Pos, Scale, AABB};
+use crate::{renderer::text::TextRenderer, style::FontWeight, types::{Color, Pos}, Scale};
+use cosmic_text::FontSystem;
 use derive_builder::Builder;
-use femtovg::{Align, Baseline, Color as fem_color, FontId, Paint, Path};
-use resource::resource;
+use femtovg::{Align, Paint };
 
 #[derive(Clone, Debug, PartialEq, Builder)]
 pub struct Instance {
     pub pos: Pos,
-    pub font: String,
-
+    pub scale: Scale,
+    #[builder(default = "None")]
+    pub font: Option<String>,
+    #[builder(default = "FontWeight::Normal")]
+    pub weight: FontWeight,
     #[builder(default = "Default::default()")]
     pub color: Color,
-    #[builder(default = "16.0")]
+    #[builder(default = "12.0")]
     pub font_size: f32,
-    #[builder(default = "1.0")]
-    pub line_width: f32,
+    #[builder(default = "18.0")]
+    pub line_height: f32,
     #[builder(default = "Align::Left")]
     pub align: Align,
     #[builder(default = "String::new()")]
@@ -29,15 +29,21 @@ pub struct Text {
     pub instance_data: Instance,
 }
 
+lazy_static::lazy_static! {
+    static ref FONT_SYSTEM: FontSystem = FontSystem::new();
+}
+
 impl Text {
-    pub fn new(pos: Pos, text: impl Into<String>, font: impl Into<String>) -> Self {
+    pub fn new(pos: Pos, scale: Scale, text: impl Into<String>) -> Self {
         Self {
             instance_data: Instance {
                 pos,
+                scale,
                 color: Color::BLACK,
-                font_size: 16.0,
-                font: font.into(),
-                line_width: 1.0,
+                font_size: 12.0,
+                font: None,
+                weight: FontWeight::Normal,
+                line_height: 18.0,
                 align: Align::Left,
                 text: text.into(),
             },
@@ -48,25 +54,17 @@ impl Text {
         Self { instance_data }
     }
 
-    pub fn render(&self, canvas: &mut Canvas, fonts: &HashMap<String, FontId>) {
+    pub fn render(&self, canvas: &mut Canvas, text_renderer: &mut TextRenderer) {
         let Instance {
-            pos,
             color,
-            align,
-            font,
-            font_size,
-            line_width,
-            text,
-        } = self.instance_data.clone();
-        let mut paint = Paint::color(color.into());
-        paint.set_text_align(align);
+            ..
+        } = self.instance_data;
 
-        let font_id: &FontId = fonts.get(&font).unwrap();
-        paint.set_font(&[*font_id]);
-        paint.set_font_size(font_size);
-        paint.set_line_width(line_width);
-        paint.set_text_baseline(Baseline::Bottom);
-
-        let _ = canvas.fill_text(pos.x, pos.y + font_size * 1.5, text, &paint);
+        if let Ok(draw_commands) = text_renderer.draw_text(canvas, self.instance_data.clone()) {
+            for (_, cmds) in draw_commands.into_iter() {
+                let temp_paint = Paint::color(color.into());
+                canvas.draw_glyph_commands(cmds, &temp_paint, 1.0);
+            }
+        }
     }
 }

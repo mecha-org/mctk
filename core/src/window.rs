@@ -56,7 +56,7 @@ pub trait Window: HasRawWindowHandle + HasRawDisplayHandle + Send + Sync + Any {
     fn set_drop_target_valid(&self, _valid: bool) {}
 
     // For fonts
-    fn fonts(&self) -> HashMap<String, String>;
+    fn fonts(&self) -> cosmic_text::fontdb::Database;
 
     // For assets
     fn assets(&self) -> HashMap<String, String>;

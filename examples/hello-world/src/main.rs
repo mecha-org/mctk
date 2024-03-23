@@ -2,11 +2,11 @@ use std::collections::HashMap;
 use std::time::Duration;
 // mod counter;
 use mctk_core::component::{Component, Message, RenderContext, RootComponent};
-use mctk_core::event::{self, Event};
+use mctk_core::reexports::cosmic_text;
 use mctk_core::renderables::{types, Renderable};
 use mctk_core::style::Styled;
 use mctk_core::widgets::Button;
-use mctk_core::{lay, msg, size, size_pct, txt, Color};
+use mctk_core::{lay, msg, size, txt, Color};
 use mctk_core::{node, node::Node};
 use mctk_macros::{component, state_component_impl};
 use mctk_smithay::layer_surface::LayerOptions;
@@ -14,8 +14,6 @@ use mctk_smithay::layer_window::LayerWindowParams;
 use mctk_smithay::WindowOptions;
 use smithay_client_toolkit::shell::wlr_layer;
 use tracing_subscriber::EnvFilter;
-
-type Point = types::Point<f32>;
 
 #[derive(Debug, Default)]
 pub struct AppState {
@@ -49,17 +47,18 @@ impl Component for App {
         let btn_pressed = self.state_ref().btn_pressed;
 
         Some(node!(
-            Button::new(txt!("Click me!"))
+            Button::new(txt!("A!"))
                 .on_click(Box::new(|| msg!(HelloEvent::ButtonPressed {
                     name: "Clicked".to_string()
                 })))
                 .on_double_click(Box::new(|| msg!(HelloEvent::ButtonPressed {
                     name: "Double clicked".to_string()
                 })))
-                .style("background_color", Color::rgb(0., 0., 255.))
-                .style("active_color", Color::rgb(255., 0., 0.))
-                .style("font_size", 16.0),
-            lay!(size: size!(60.0, 60.0)),
+                .style("color", Color::rgb(255., 0., 0.))
+                .style("background_color", Color::rgb(255., 255., 255.))
+                .style("active_color", Color::rgb(200., 200., 200.))
+                .style("font_size", 24.0),
+            lay!(size: size!(180.0, 180.0)),
         ))
     }
 
@@ -85,14 +84,14 @@ async fn main() -> anyhow::Result<()> {
         .with_env_filter(env_filter)
         .init();
 
-    let mut fonts: HashMap<String, String> = HashMap::new();
+    // let mut fonts: Vec<String> = Vec::new();
     let assets: HashMap<String, String> = HashMap::new();
     let svgs: HashMap<String, String> = HashMap::new();
 
-    fonts.insert(
-        "SpaceGrotesk-Regular".to_string(),
-        "src/assets/fonts/SpaceGrotesk-Regular.ttf".to_string(),
-    );
+    let mut fonts = cosmic_text::fontdb::Database::new();
+    fonts.load_system_fonts();
+
+    fonts.load_font_data(include_bytes!("assets/fonts/SpaceGrotesk-Regular.ttf").into());
 
     let namespace = "mctk.layer_shell.demo".to_string();
 

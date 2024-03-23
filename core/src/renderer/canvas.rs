@@ -1,29 +1,21 @@
-use femtovg::renderer::OpenGl;
-use femtovg::{Canvas, Color, FontId, ImageFlags, ImageId, Paint, Path};
+use cosmic_text::{Buffer, FontSystem};
+use femtovg::{Color, FontId, ImageFlags, ImageId, Paint, Path};
 use glutin::api::egl;
-use glutin::api::egl::context::{NotCurrentContext, PossiblyCurrentContext};
+use glutin::api::egl::context::PossiblyCurrentContext;
 use glutin::api::egl::surface::Surface;
-use glutin::config::GlConfig;
-use glutin::context::{
-    ContextAttributesBuilder, NotCurrentGlContextSurfaceAccessor,
-    PossiblyCurrentContextGlSurfaceAccessor, PossiblyCurrentGlContext,
-};
-use glutin::display::GlDisplay;
-use glutin::surface::{GlSurface, SurfaceAttributesBuilder, WindowSurface};
-use glutin::{api::egl::display::Display, config::ConfigTemplateBuilder};
+use glutin::context::PossiblyCurrentContextGlSurfaceAccessor;
+use glutin::surface::{GlSurface, WindowSurface};
 use raw_window_handle::{RawDisplayHandle, RawWindowHandle};
-use resource::resource;
 use std::collections::HashMap;
-use std::num::NonZeroU32;
 use std::sync::{Arc, RwLock};
-use std::{fmt, path};
-use usvg::fontdb::Database;
+use std::fmt;
 use usvg::TreeParsing;
-
+use crate::font_cache::FontCache;
 use crate::renderables::Renderable;
 use crate::Scale;
 use crate::{node::Node, types::PixelSize};
-
+use super::text::TextRenderer;
+use super::gl::{init_gl, init_gl_canvas};
 use super::Caches;
 
 #[derive(Debug)]
@@ -32,90 +24,15 @@ pub struct SvgData {
     pub scale: Scale,
 }
 
-pub fn init_gl_surface_context(
-    raw_window_handle: RawWindowHandle,
-    (width, height): (u32, u32),
-    gl_display: &Display,
-) -> (Surface<WindowSurface>, PossiblyCurrentContext) {
-    let template = ConfigTemplateBuilder::new().with_alpha_size(8).build();
-
-    let config = unsafe { gl_display.find_configs(template) }
-        .unwrap()
-        .reduce(|config, acc| {
-            if config.num_samples() > acc.num_samples() {
-                config
-            } else {
-                acc
-            }
-        })
-        .expect("No available configs");
-
-    let context_attributes = ContextAttributesBuilder::new().build(None);
-    let not_current = unsafe {
-        gl_display
-            .create_context(&config, &context_attributes)
-            .expect("Failed to create OpenGL context")
-    };
-
-    let attrs = SurfaceAttributesBuilder::<WindowSurface>::new().build(
-        raw_window_handle,
-        NonZeroU32::new(width).unwrap(),
-        NonZeroU32::new(height).unwrap(),
-    );
-
-    let gl_surface = unsafe {
-        gl_display
-            .create_window_surface(&config, &attrs)
-            .expect("Failed to create OpenGl surface")
-    };
-
-    let gl_context = not_current
-        .make_current(&gl_surface)
-        .expect("Failed to make newly created OpenGL context current");
-
-    (gl_surface, gl_context)
-}
-
-pub fn init_gl(
-    raw_display_handle: RawDisplayHandle,
-    raw_window_handle: RawWindowHandle,
-    (width, height): (u32, u32),
-) -> (Display, Surface<WindowSurface>, PossiblyCurrentContext) {
-    let gl_display =
-        unsafe { Display::new(raw_display_handle).expect("Failed to create EGL Display") };
-
-    let (gl_surface, gl_context) =
-        init_gl_surface_context(raw_window_handle, (width, height), &gl_display);
-
-    (gl_display, gl_surface, gl_context)
-}
-
-pub fn init_gl_canvas(
-    gl_display: &Display,
-    (width, height): (u32, u32),
-    scale_factor: f32,
-) -> Canvas<OpenGl> {
-    let renderer =
-        unsafe { OpenGl::new_from_function_cstr(|s| gl_display.get_proc_address(s) as *const _) }
-            .expect("cannot create opengl renderer");
-
-    // create femtovg canvas
-    let mut canvas = Canvas::new(renderer).expect("Cannot create canvas");
-    canvas.set_size(width, height, scale_factor);
-
-    canvas
-}
 
 fn init_canvas_renderer(
     raw_display_handle: RawDisplayHandle,
     raw_window_handle: RawWindowHandle,
     logical_size: PixelSize,
     scale_factor: f32,
-    fonts: HashMap<String, String>,
     assets: HashMap<String, String>,
 ) -> (
     CanvasContext,
-    HashMap<String, FontId>,
     HashMap<String, ImageId>,
 ) {
     let size = logical_size;
@@ -125,19 +42,6 @@ fn init_canvas_renderer(
     let (gl_display, gl_surface, gl_context) =
         init_gl(raw_display_handle, raw_window_handle, (width, height));
     let mut gl_canvas = init_gl_canvas(&gl_display, (width, height), scale_factor);
-
-    let mut loaded_fonts = HashMap::new();
-
-    for (name, path_) in fonts.into_iter() {
-        match gl_canvas.add_font(path_.as_str()) {
-            Ok(font_id) => {
-                loaded_fonts.insert(name, font_id);
-            }
-            Err(e) => {
-                println!("error while loading font {:?} error: {:?}", name, e);
-            }
-        }
-    }
 
     let mut loaded_assets = HashMap::new();
 
@@ -155,15 +59,13 @@ fn init_canvas_renderer(
     let canvas_context = CanvasContext {
         gl_canvas,
         gl_context,
-        gl_display,
         gl_surface,
     };
 
-    (canvas_context, loaded_fonts, loaded_assets)
+    (canvas_context, loaded_assets)
 }
 
 pub struct CanvasContext {
-    gl_display: Display,
     // egl context, surface
     pub gl_context: PossiblyCurrentContext,
     pub gl_surface: egl::surface::Surface<WindowSurface>,
@@ -172,8 +74,10 @@ pub struct CanvasContext {
 }
 
 pub struct CanvasRenderer {
+    fonts: cosmic_text::fontdb::Database,
+    scale_factor: f32,
     context: CanvasContext,
-    fonts: HashMap<String, FontId>,
+    text_renderer: TextRenderer,
     assets: HashMap<String, ImageId>,
     svgs: HashMap<String, SvgData>,
 }
@@ -193,16 +97,16 @@ impl fmt::Debug for CanvasRenderer {
 impl super::Renderer for CanvasRenderer {
     fn new<W: crate::window::Window>(w: Arc<RwLock<W>>) -> Self {
         let window = w.read().unwrap();
-
-        let (canvas_context, fonts, assets) = init_canvas_renderer(
+        let fonts = window.fonts();
+        let scale_factor = window.scale_factor();
+        let (canvas_context, assets) = init_canvas_renderer(
             window.raw_display_handle(),
             window.raw_window_handle(),
             window.logical_size(),
-            window.scale_factor(),
-            window.fonts(),
+            scale_factor,
             window.assets(),
         );
-
+        let text_renderer = TextRenderer::new(fonts.clone());
         let svgs = window.svgs();
         let mut loaded_svgs = HashMap::new();
 
@@ -229,8 +133,10 @@ impl super::Renderer for CanvasRenderer {
         }
 
         Self {
+            fonts: fonts.clone(),
+            scale_factor,
             context: canvas_context,
-            fonts,
+            text_renderer,
             assets,
             svgs: loaded_svgs,
         }
@@ -239,23 +145,25 @@ impl super::Renderer for CanvasRenderer {
     fn configure<W: crate::window::Window>(&mut self, w: Arc<RwLock<W>>) {
         // re-initialize
         let window = w.read().unwrap();
-        let (canvas_context, fonts, assets) = init_canvas_renderer(
+        let scale_factor = window.scale_factor();
+
+        let (canvas_context, assets) = init_canvas_renderer(
             window.raw_display_handle(),
             window.raw_window_handle(),
             window.logical_size(),
-            window.scale_factor(),
-            window.fonts(),
+            scale_factor,
             window.assets(),
         );
 
+        self.scale_factor = scale_factor;
         self.context = canvas_context;
-        self.fonts = fonts;
         self.assets = assets;
     }
 
     fn render(&mut self, node: &Node, _physical_size: PixelSize) {
         let canvas = &mut self.context.gl_canvas;
         let surface: &Surface<WindowSurface> = &mut self.context.gl_surface;
+        let text_renderer = &mut self.text_renderer;
 
         let gl_context = &mut self.context.gl_context;
 
@@ -289,16 +197,13 @@ impl super::Renderer for CanvasRenderer {
                     svg.render(canvas, &self.svgs);
                 }
                 Renderable::Text(text) => {
-                    text.render(canvas, &self.fonts);
+                    text.render(canvas, text_renderer);
                 }
                 Renderable::RadialGradient(rg) => {
                     rg.render(canvas);
                 }
             }
         }
-
-        // Make smol red rectangle
-        // canvas.clear_rect(0, 0, 30, 30, Color::rgbf(0., 1., 0.));
 
         // Tell renderer to execute all drawing commands
         canvas.flush();
@@ -311,14 +216,9 @@ impl super::Renderer for CanvasRenderer {
 
     /// This default is provided for tests, it should be overridden
     fn caches(&self) -> Caches {
-        Default::default()
-        // Caches {
-        //     shape_buffer: Arc::new(RwLock::new(BufferCache::new())),
-        //     text_buffer: Arc::new(RwLock::new(BufferCache::new())),
-        //     image_buffer: Arc::new(RwLock::new(BufferCache::new())),
-        //     raster: Arc::new(RwLock::new(RasterCache::new())),
-        //     font: Default
-        // }
+        Caches {
+            font: Arc::new(RwLock::new(FontCache::new(self.fonts.clone())))
+        }
     }
 }
 

@@ -1,22 +1,17 @@
 use std::collections::HashMap;
 use std::time::Duration;
-// mod counter;
 use mctk_core::component::{Component, Message, RenderContext, RootComponent};
+use mctk_core::reexports::cosmic_text;
 use mctk_core::renderables::{types, Renderable};
 use mctk_core::style::Styled;
 use mctk_core::widgets::Button;
-use mctk_core::{lay, msg, size, size_pct, txt, Color};
+use mctk_core::{lay, msg, size, txt, Color};
 use mctk_core::{node, node::Node};
 use mctk_macros::{component, state_component_impl};
-use mctk_smithay::layer_surface::LayerOptions;
-use mctk_smithay::layer_window::LayerWindowParams;
 use mctk_smithay::lock_window::SessionLockWindowParams;
 use mctk_smithay::WindowOptions;
 use smithay_client_toolkit::reexports::calloop;
-use smithay_client_toolkit::shell::wlr_layer;
 use tracing_subscriber::EnvFilter;
-
-type Point = types::Point<f32>;
 
 #[derive(Debug, Default)]
 pub struct AppState {
@@ -88,14 +83,13 @@ async fn main() -> anyhow::Result<()> {
         .with_env_filter(env_filter)
         .init();
 
-    let mut fonts: HashMap<String, String> = HashMap::new();
     let assets: HashMap<String, String> = HashMap::new();
     let svgs: HashMap<String, String> = HashMap::new();
 
-    fonts.insert(
-        "SpaceGrotesk-Regular".to_string(),
-        "src/assets/fonts/SpaceGrotesk-Regular.ttf".to_string(),
-    );
+    let mut fonts = cosmic_text::fontdb::Database::new();
+    fonts.load_system_fonts();
+
+    fonts.load_font_data(include_bytes!("assets/fonts/SpaceGrotesk-Regular.ttf").into());
 
     let window_opts = WindowOptions {
         height: 480 as u32,

@@ -348,7 +348,7 @@ impl Node {
         }
     }
 
-    pub(crate) fn layout(&mut self, _prev: &Self, font_cache: &FontCache, scale_factor: f32) {
+    pub(crate) fn layout(&mut self, _prev: &Self, font_cache: &mut FontCache, scale_factor: f32) {
         self.calculate_layout(font_cache, scale_factor);
         self.set_aabb(
             Pos::default(),

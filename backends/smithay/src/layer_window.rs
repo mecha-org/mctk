@@ -2,6 +2,7 @@ use layer_surface::{LayerOptions, LayerShellSctkWindow};
 use mctk_core::component::{self, Component, RootComponent};
 use mctk_core::input::{Button, Input, Motion, MouseButton, TouchAction};
 use mctk_core::raw_handle::RawWaylandHandle;
+use mctk_core::reexports::cosmic_text;
 use mctk_core::types::PixelSize;
 use mctk_core::ui::UI;
 use pointer::{MouseEvent, ScrollDelta};
@@ -11,7 +12,6 @@ use raw_window_handle::{
 use smithay_client_toolkit::reexports::calloop::channel::{Event, Sender};
 use smithay_client_toolkit::reexports::calloop::{self, EventLoop};
 use std::collections::HashMap;
-use std::ptr::null;
 
 use crate::keyboard::{keysym_to_key, KeyboardEvent};
 use crate::touch::TouchEvent;
@@ -23,7 +23,7 @@ pub struct LayerWindow {
     scale_factor: f32,
     handle: Option<RawWaylandHandle>,
     window_tx: Sender<WindowMessage>,
-    fonts: HashMap<String, String>,
+    fonts: cosmic_text::fontdb::Database,
     assets: HashMap<String, String>,
     svgs: HashMap<String, String>,
 }
@@ -34,7 +34,7 @@ pub struct LayerWindowParams {
     pub title: String,
     pub namespace: String,
     pub window_opts: WindowOptions,
-    pub fonts: HashMap<String, String>,
+    pub fonts: cosmic_text::fontdb::Database,
     pub assets: HashMap<String, String>,
     pub svgs: HashMap<String, String>,
     pub layer_shell_opts: LayerOptions,
@@ -257,7 +257,7 @@ impl mctk_core::window::Window for LayerWindow {
         let _ = self.window_tx.send(WindowMessage::RedrawRequested);
     }
 
-    fn fonts(&self) -> HashMap<String, String> {
+    fn fonts(&self) -> cosmic_text::fontdb::Database {
         self.fonts.clone()
     }
 

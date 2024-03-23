@@ -150,7 +150,7 @@ pub trait Component: fmt::Debug {
         _height: Option<f32>,
         _max_width: Option<f32>,
         _max_height: Option<f32>,
-        _font_cache: &FontCache,
+        _font_cache: &mut FontCache,
         _scale_factor: f32,
     ) -> (Option<f32>, Option<f32>) {
         (None, None)

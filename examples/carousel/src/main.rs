@@ -1,31 +1,15 @@
 use std::collections::HashMap;
 use std::time::Duration;
-
-// mod counter;
-use mctk_core::component::{Component, Message, RenderContext, RootComponent};
-use mctk_core::layout::Alignment;
-// use counter::{Counter, CounterMessage};
-// use mctk_core::app::Application;
-use mctk_core::reexports::smithay_client_toolkit::{
-    reexports::calloop::{
-        self,
-        channel::Sender,
-        timer::{TimeoutAction, Timer},
-    },
-    shell::wlr_layer,
-};
-use mctk_core::renderables::types::Size;
-use mctk_core::renderables::{types, Renderable};
-use mctk_core::style::{HorizontalPosition, Styled};
-use mctk_core::types::Pos;
-use mctk_core::widgets::{self, Button, Carousel, Div, Image, Svg};
-use mctk_core::{lay, layout, msg, rect, size, size_pct, txt, Color};
+use mctk_core::component::{Component, RootComponent};
+use mctk_core::reexports::cosmic_text;
+use mctk_core::renderables::types;
+use mctk_core::widgets::{Carousel, Div};
+use mctk_core::lay;
 use mctk_core::{node, node::Node};
-use mctk_macros::{component, state_component_impl};
 use mctk_smithay::layer_surface::LayerOptions;
 use mctk_smithay::layer_window::LayerWindowParams;
 use mctk_smithay::WindowOptions;
-use tracing::info;
+use smithay_client_toolkit::shell::wlr_layer;
 use tracing_subscriber::EnvFilter;
 
 type Point = types::Point<f32>;
@@ -117,32 +101,10 @@ async fn main() -> anyhow::Result<()> {
         .with_env_filter(env_filter)
         .init();
 
-    let mut fonts: HashMap<String, String> = HashMap::new();
+    let mut fonts = cosmic_text::fontdb::Database::new();
+    fonts.load_system_fonts();
 
-    fonts.insert(
-        "SpaceGrotesk-Bold".to_string(),
-        "src/assets/fonts/SpaceGrotesk-Bold.ttf".to_string(),
-    );
-
-    fonts.insert(
-        "SpaceGrotesk-Light".to_string(),
-        "src/assets/fonts/SpaceGrotesk-Light.ttf".to_string(),
-    );
-
-    fonts.insert(
-        "SpaceGrotesk-Medium".to_string(),
-        "src/assets/fonts/SpaceGrotesk-Medium.ttf".to_string(),
-    );
-
-    fonts.insert(
-        "SpaceGrotesk-Regular".to_string(),
-        "src/assets/fonts/SpaceGrotesk-Regular.ttf".to_string(),
-    );
-
-    fonts.insert(
-        "SpaceGrotesk-SemiBold".to_string(),
-        "src/assets/fonts/SpaceGrotesk-SemiBold.ttf".to_string(),
-    );
+    fonts.load_font_data(include_bytes!("assets/fonts/SpaceGrotesk-Regular.ttf").into());
 
     let mut assets: HashMap<String, String> = HashMap::new();
 

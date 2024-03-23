@@ -14,9 +14,9 @@ default = []
 instrumented = ["superluminal-perf"]
 
 [dependencies]
-
 mctk_macros = { path="../macros" }
-smithay-client-toolkit = "0.18.0"
+rgb = "0.8.20"
+imgref = "1.6.1"
 bytemuck = { version = "1.4", features = ["derive"] }
 anyhow = { version = "1.0.75", features = ["backtrace"]}
 tracing = "0.1.37"
@@ -25,17 +25,21 @@ raw-window-handle = "0.5.2"
 futures = "0.3.28"
 wayland-backend = { version = "0.3.2", features = ["client_system"]}
 femtovg = { version = "0.8.2", features = ["image", "image-loading"] }
+crossbeam-channel = "0.5.11"
+cosmic-text = { git="https://github.com/pop-os/cosmic-text", rev="19b4d8336e34073bb51b83578d3d803c8c953787" }
+swash = "0.1.12"
 image = { version = "*", default-features = false, features = ["png", "jpeg"] }
 glutin = "0.30.10"
 euclid = "0.22.3"
 resource = "0.5.0"
-bitflags = "1.2"
 derive_more = "0.99"
 serde = { version = "1.0.163", features = ["derive"] }
-crossbeam-channel = "0.5.11"
 ahash = "0.3.2"
 derive_builder = "0.20.0"
 usvg = { version = "0.33.0" }
+lazy_static = "1.4.0"
+sys-locale = "0.3.1"
+glyph_brush_layout = "0.2"
 
 # features
 superluminal-perf = { version = "0.1", optional = true }

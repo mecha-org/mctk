@@ -1,4 +1,3 @@
-mod gl;
 pub mod layer_surface;
 pub mod layer_window;
 pub mod lock_surface;
