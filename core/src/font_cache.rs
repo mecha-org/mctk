@@ -62,44 +62,6 @@ impl FontCache {
             .unwrap();
 
         text_renderer.measure_text(text_instance)
-
-        // let section_text: Vec<_> = text
-        //     .iter()
-        //     .map(|TextSegment { text, size, font }| SectionText {
-        //         text,
-        //         scale: size
-        //             .map_or(scaled_size, |s| s * scale_factor * SIZE_SCALE)
-        //             .into(),
-        //         font_id: font
-        //             .as_ref()
-        //             .and_then(|f| self.font(f))
-        //             .unwrap_or(base_font),
-        //     })
-        //     .collect();
-
-        // let screen_position = (
-        //     match alignment {
-        //         HorizontalPosition::Left => 0.0,
-        //         HorizontalPosition::Center => bounds.0 / 2.0,
-        //         HorizontalPosition::Right => bounds.0,
-        //     },
-        //     0.0,
-        // );
-
-        // glyph_brush_layout::Layout::default()
-        //     .h_align(match alignment {
-        //         HorizontalPosition::Left => HorizontalAlign::Left,
-        //         HorizontalPosition::Right => HorizontalAlign::Right,
-        //         HorizontalPosition::Center => HorizontalAlign::Center,
-        //     })
-        //     .calculate_glyphs(
-        //         &self.fonts,
-        //         &SectionGeometry {
-        //             screen_position,
-        //             bounds,
-        //         },
-        //         &section_text,
-        //     )
     }
 }
 
