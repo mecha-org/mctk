@@ -602,7 +602,7 @@ impl super::node::Node {
     fn resolve_child_sizes(
         &mut self,
         inner_size: Size,
-        font_cache: &crate::font_cache::FontCache,
+        font_cache: &mut crate::font_cache::FontCache,
         scale_factor: f32,
         final_pass: bool,
     ) {
@@ -987,7 +987,7 @@ impl super::node::Node {
     fn resolve_layout(
         &mut self,
         bounds_size: Size,
-        font_cache: &crate::font_cache::FontCache,
+        font_cache: &mut crate::font_cache::FontCache,
         scale_factor: f32,
         final_pass: bool,
     ) {
@@ -1036,7 +1036,7 @@ impl super::node::Node {
 
     pub(crate) fn calculate_layout(
         &mut self,
-        font_cache: &crate::font_cache::FontCache,
+        font_cache: &mut crate::font_cache::FontCache,
         scale_factor: f32,
     ) {
         self.layout_result.position = Rect {

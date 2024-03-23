@@ -1,70 +1,106 @@
-use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
-
-use crate::style::HorizontalPosition;
+use std::ops::Deref;
+use cosmic_text::{Buffer, FontSystem, Metrics};
+use cosmic_text::fontdb::Database;
 use femtovg::Align;
+
+use crate::renderables::text::{self, InstanceBuilder};
+use crate::renderer::text::TextRenderer;
+use crate::style::HorizontalPosition;
+use crate::{Pos, Scale};
 
 /// Value by which fonts are scaled. 12 px fonts render at scale 18 px for some reason. Useful if you need to compute the line height: it will be `<font_size> * SIZE_SCALE` in logical size, and `<font_size> * SIZE_SCALE * <scale_factor>` in physical pixels.
 pub const SIZE_SCALE: f32 = 1.5;
-/// Stores fonts, and provides text layout functionality to Components who render.
-#[derive(Default)]
+pub const DEFAULT_FONT_SIZE: f32= 12.;
+pub const DEFAULT_LINE_HEIGHT: f32 = 16.;
+pub const GLYPH_PADDING: u32 = 0;
+pub const GLYPH_MARGIN: u32 = 0;
+pub const TEXTURE_SIZE: usize = 512;
+
 pub struct FontCache {
-    // pub(crate) fonts: Fonts,
-    pub(crate) font_names: HashMap<String, usize>,
+    text_renderer: TextRenderer,
 }
 
 impl FontCache {
-    // pub fn layout_text(
-    //     &self,
-    //     text: &[TextSegment],
-    //     base_font: Option<&str>,
-    //     base_size: f32,
-    //     scale_factor: f32,
-    //     alignment: HorizontalPosition,
-    //     bounds: (f32, f32),
-    // ) -> Vec<SectionGlyph> {
-    //     // TODO: Should accept an AABB and a start pos within it.
-    //     let scaled_size = base_size * scale_factor * SIZE_SCALE;
-    //     let base_font = self.font_or_default(base_font);
+    pub fn new(fonts: Database) -> Self {
+        let text_renderer = TextRenderer::new(fonts);
+        
+        Self {
+            text_renderer,
+        }
+    }
 
-    //     let section_text: Vec<_> = text
-    //         .iter()
-    //         .map(|TextSegment { text, size, font }| SectionText {
-    //             text,
-    //             scale: size
-    //                 .map_or(scaled_size, |s| s * scale_factor * SIZE_SCALE)
-    //                 .into(),
-    //             font_id: font
-    //                 .as_ref()
-    //                 .and_then(|f| self.font(f))
-    //                 .unwrap_or(base_font),
-    //         })
-    //         .collect();
+    pub fn measure_text(
+        &mut self,
+        text: String,
+        font: Option<String>,
+        size: f32,
+        scale_factor: f32,
+        line_height: f32,
+        h_alignment: HorizontalPosition,
+        bounds: (f32, f32),
+    ) -> (Option<f32>, Option<f32>) {
+        let font_size = size * scale_factor;
+        let text_renderer = &mut self.text_renderer;
 
-    //     let screen_position = (
-    //         match alignment {
-    //             HorizontalPosition::Left => 0.0,
-    //             HorizontalPosition::Center => bounds.0 / 2.0,
-    //             HorizontalPosition::Right => bounds.0,
-    //         },
-    //         0.0,
-    //     );
+        let text_instance = InstanceBuilder::default()
+            .align(match h_alignment {
+                HorizontalPosition::Left => Align::Left,
+                HorizontalPosition::Center => Align::Center,
+                HorizontalPosition::Right => Align::Right,
+            })
+            .pos(Pos { x: 0., y: 0., z: 0. })
+            .scale(Scale {
+                width: bounds.0,
+                height: bounds.1,
+            })
+            .text(text.to_string())
+            .font(font)
+            .line_height(line_height)
+            .font_size(font_size)
+            .build()
+            .unwrap();
 
-    //     glyph_brush_layout::Layout::default()
-    //         .h_align(match alignment {
-    //             HorizontalPosition::Left => HorizontalAlign::Left,
-    //             HorizontalPosition::Right => HorizontalAlign::Right,
-    //             HorizontalPosition::Center => HorizontalAlign::Center,
-    //         })
-    //         .calculate_glyphs(
-    //             &self.fonts,
-    //             &SectionGeometry {
-    //                 screen_position,
-    //                 bounds,
-    //             },
-    //             &section_text,
-    //         )
-    // }
+        text_renderer.measure_text(text_instance)
+
+        // let section_text: Vec<_> = text
+        //     .iter()
+        //     .map(|TextSegment { text, size, font }| SectionText {
+        //         text,
+        //         scale: size
+        //             .map_or(scaled_size, |s| s * scale_factor * SIZE_SCALE)
+        //             .into(),
+        //         font_id: font
+        //             .as_ref()
+        //             .and_then(|f| self.font(f))
+        //             .unwrap_or(base_font),
+        //     })
+        //     .collect();
+
+        // let screen_position = (
+        //     match alignment {
+        //         HorizontalPosition::Left => 0.0,
+        //         HorizontalPosition::Center => bounds.0 / 2.0,
+        //         HorizontalPosition::Right => bounds.0,
+        //     },
+        //     0.0,
+        // );
+
+        // glyph_brush_layout::Layout::default()
+        //     .h_align(match alignment {
+        //         HorizontalPosition::Left => HorizontalAlign::Left,
+        //         HorizontalPosition::Right => HorizontalAlign::Right,
+        //         HorizontalPosition::Center => HorizontalAlign::Center,
+        //     })
+        //     .calculate_glyphs(
+        //         &self.fonts,
+        //         &SectionGeometry {
+        //             screen_position,
+        //             bounds,
+        //         },
+        //         &section_text,
+        //     )
+    }
 }
 
 /// Used by [`FontCache#layout_text`][FontCache#method.layout_text] as an input. Accordingly, it is also commonly used as the input to Components that display text, e.g. [`widgets::Text`][crate::widgets::Text] and [`widgets::Button`][crate::widgets::Button].

@@ -1,6 +1,6 @@
 // use mctk_core::{style::HorizontalPosition, widgets::*, *};
 
-use mctk_core::{component::RootComponent, node::Node};
+use mctk_core::{component::RootComponent, node::Node, reexports::cosmic_text};
 
 #[derive(Debug, Default)]
 pub struct App {}
@@ -165,7 +165,11 @@ fn main() {
         ConfigBuilder::new().build(),
         std::fs::File::create("example.log").unwrap(),
     );
-    mctk_winit::Window::open_blocking::<App>("Hello scroll!", 800, 600, vec![], vec![]);
+    
+    let mut fonts = cosmic_text::fontdb::Database::new();
+    fonts.load_system_fonts();
+
+    mctk_winit::Window::open_blocking::<App>("Hello scroll!", 800, 600, fonts, vec![]);
 
     println!("bye");
 }

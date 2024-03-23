@@ -32,37 +32,3 @@ pub enum Renderable {
     Svg(Svg),
     RadialGradient(RadialGradient),
 }
-
-pub fn render_renderables(
-    renderables: Vec<Renderable>,
-    canvas: &mut Canvas,
-    fonts: &HashMap<String, FontId>,
-    assets: &HashMap<String, ImageId>,
-    svgs: &HashMap<String, SvgData>,
-) {
-    for renderable in renderables {
-        match renderable {
-            Renderable::Rect(rect) => {
-                rect.render(canvas);
-            }
-            Renderable::Line(line) => {
-                line.render(canvas);
-            }
-            Renderable::Circle(circle) => {
-                circle.render(canvas);
-            }
-            Renderable::Image(image) => {
-                image.render(canvas, assets);
-            }
-            Renderable::Svg(svg) => {
-                svg.render(canvas, svgs);
-            }
-            Renderable::Text(text) => {
-                text.render(canvas, fonts);
-            }
-            Renderable::RadialGradient(rg) => {
-                rg.render(canvas);
-            }
-        }
-    }
-}

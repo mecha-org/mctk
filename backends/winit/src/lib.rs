@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use mctk_core::component::{Component, RootComponent};
 use mctk_core::input::{Button, Input, Motion, MouseButton};
+use mctk_core::reexports::cosmic_text;
 use mctk_core::types::PixelSize;
 use mctk_core::ui::UI;
 use raw_window_handle::{
@@ -16,7 +17,7 @@ use winit::{
 
 pub struct Window {
     winit_window: winit::window::Window,
-    fonts: HashMap<String, String>,
+    fonts: cosmic_text::fontdb::Database,
     assets: HashMap<String, String>,
     svgs: HashMap<String, String>,
 }
@@ -28,7 +29,7 @@ impl Window {
         title: &str,
         width: u32,
         height: u32,
-        mut fonts: Vec<(String, &'static [u8])>,
+        mut fonts: cosmic_text::fontdb::Database,
         mut assets: Vec<(String, &'static [u8])>,
     ) where
         A: 'static + RootComponent + Component + Default + Send + Sync,
@@ -41,17 +42,13 @@ impl Window {
             .unwrap();
         let mut ui: UI<Window, A> = UI::new(Window {
             winit_window: window,
-            fonts: HashMap::new(),
+            fonts,
             assets: HashMap::new(),
             svgs: HashMap::new(),
         });
-        for (name, data) in fonts.drain(..) {
-            ui.add_font(name, data);
-        }
 
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Wait;
-            // inst(&format!("event_handler <{:?}>", &event));
 
             match event {
                 Event::MainEventsCleared => {
@@ -138,7 +135,7 @@ impl mctk_core::window::Window for Window {
         self.winit_window.request_redraw();
     }
 
-    fn fonts(&self) -> HashMap<String, String> {
+    fn fonts(&self) -> cosmic_text::fontdb::Database {
         self.fonts.clone()
     }
 

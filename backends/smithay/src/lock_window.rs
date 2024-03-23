@@ -1,9 +1,9 @@
 use mctk_core::component::{self, Component, RootComponent};
 use mctk_core::input::{Button, Input, Motion, MouseButton, TouchAction};
 use mctk_core::raw_handle::RawWaylandHandle;
-use mctk_core::renderer::canvas::CanvasContext;
-use mctk_core::types::PixelSize;
+use mctk_core::reexports::cosmic_text;
 use mctk_core::ui::UI;
+use mctk_core::PixelSize;
 use pointer::{MouseEvent, ScrollDelta};
 use raw_window_handle::{
     HasRawDisplayHandle, HasRawWindowHandle, RawDisplayHandle, RawWindowHandle,
@@ -11,12 +11,11 @@ use raw_window_handle::{
 use smithay_client_toolkit::reexports::calloop::channel::{Channel, Event, Sender};
 use smithay_client_toolkit::reexports::calloop::{self, EventLoop};
 use std::collections::HashMap;
-use std::thread;
 
 use crate::keyboard::{keysym_to_key, KeyboardEvent};
 use crate::lock_surface::SessionLockSctkWindow;
 use crate::touch::TouchEvent;
-use crate::{layer_surface, pointer, WindowEvent, WindowMessage, WindowOptions};
+use crate::{pointer, WindowEvent, WindowMessage, WindowOptions};
 
 pub struct SessionLockWindow {
     width: u32,
@@ -24,7 +23,7 @@ pub struct SessionLockWindow {
     scale_factor: f32,
     handle: Option<RawWaylandHandle>,
     window_tx: Sender<WindowMessage>,
-    fonts: HashMap<String, String>,
+    fonts: cosmic_text::fontdb::Database,
     assets: HashMap<String, String>,
     svgs: HashMap<String, String>,
     session_lock_tx: Sender<SessionLockMessage>,
@@ -39,7 +38,7 @@ pub enum SessionLockMessage {
 
 pub struct SessionLockWindowParams {
     pub window_opts: WindowOptions,
-    pub fonts: HashMap<String, String>,
+    pub fonts: cosmic_text::fontdb::Database,
     pub assets: HashMap<String, String>,
     pub svgs: HashMap<String, String>,
     pub session_lock_tx: Sender<SessionLockMessage>,
@@ -261,7 +260,7 @@ impl mctk_core::window::Window for SessionLockWindow {
         let _ = self.window_tx.send(WindowMessage::RedrawRequested);
     }
 
-    fn fonts(&self) -> HashMap<String, String> {
+    fn fonts(&self) -> cosmic_text::fontdb::Database {
         self.fonts.clone()
     }
 

@@ -99,8 +99,7 @@ impl Component for Button {
             super::Text::new(self.label.clone())
                 .style("size", self.style_val("font_size").unwrap())
                 .style("color", self.style_val("text_color").unwrap())
-                .style("h_alignment", self.style_val("h_alignment").unwrap())
-                .style("font", "SpaceGrotesk-Regular"),
+                .style("h_alignment", self.style_val("h_alignment").unwrap()),
             lay![size_pct: [100, Auto],]
         ));
 

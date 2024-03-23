@@ -15,7 +15,7 @@ pub mod reexports {
     pub use femtovg;
     pub use glutin;
     pub use resource;
-    pub use smithay_client_toolkit;
+    pub use cosmic_text;
 }
 
 //

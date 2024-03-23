@@ -4,6 +4,8 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::{Mutex, OnceLock};
 
+use cosmic_text::Weight;
+
 use crate::layout::*;
 use crate::types::*;
 
@@ -33,6 +35,25 @@ impl Default for HorizontalPosition {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum FontWeight {
+    Thin = 100,
+    ExtraLight = 200,
+    Light = 300,
+    Normal = 400,
+    Medium = 500,
+    Semibold = 600,
+    Bold = 700,
+    ExtraBold = 800,
+    Black = 900,
+}
+
+impl Default for FontWeight {
+    fn default() -> Self {
+        Self::Normal
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum StyleVal {
     Dimension(Dimension),
@@ -44,6 +65,7 @@ pub enum StyleVal {
     Layout(Layout),
     HorizontalPosition(HorizontalPosition),
     VerticalPosition(VerticalPosition),
+    FontWeight(FontWeight),
     Float(f64),
     Int(u32),
     Bool(bool),
@@ -295,6 +317,7 @@ impl Default for Style {
             (StyleKey::new("TextBox", "padding", None), 1.0.into()),
             // Text
             (StyleKey::new("Text", "size", None), 12.0.into()),
+            (StyleKey::new("Text", "font_weight", None), FontWeight::Normal.into()),
             (StyleKey::new("Text", "color", None), Color::BLACK.into()),
             (
                 StyleKey::new("Text", "h_alignment", None),
@@ -639,6 +662,27 @@ impl From<Option<StyleVal>> for HorizontalPosition {
         }
     }
 }
+impl From<FontWeight> for StyleVal {
+    fn from(c: FontWeight) -> Self {
+        Self::FontWeight(c)
+    }
+}
+impl From<StyleVal> for FontWeight {
+    fn from(v: StyleVal) -> Self {
+        match v {
+            StyleVal::FontWeight(c) => c,
+            x => panic!("Tried to coerce {x:?} into a FontWeight"),
+        }
+    }
+}
+impl From<Option<StyleVal>> for FontWeight {
+    fn from(v: Option<StyleVal>) -> Self {
+        match v {
+            Some(StyleVal::FontWeight(c)) => c,
+            x => panic!("Tried to coerce {x:?} into a FontWeight"),
+        }
+    }
+}
 impl From<f64> for StyleVal {
     fn from(c: f64) -> Self {
         Self::Float(c)
@@ -722,6 +766,10 @@ impl StyleVal {
     }
 
     pub fn vertical_position(self) -> VerticalPosition {
+        self.into()
+    }
+
+    pub fn font_weight(self) -> FontWeight {
         self.into()
     }
 

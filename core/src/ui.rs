@@ -141,7 +141,7 @@ impl<W: 'static + Window, A: 'static + RootComponent + Component + Default + Sen
 
                         let caches = renderer.as_mut().unwrap().caches();
                         inst("Node::layout");
-                        new.layout(&old, &caches.font.read().unwrap(), scale_factor);
+                        new.layout(&old, &mut caches.font.write().unwrap(), scale_factor);
                         inst_end();
 
                         inst("Node::render");
@@ -228,7 +228,6 @@ impl<W: 'static + Window, A: 'static + RootComponent + Component + Default + Sen
         let window = self.window.clone();
         let renderer = Arc::new(RwLock::new(Some(ActiveRenderer::new(window.clone()))));
 
-        println!("renderer initialized");
         self.renderer = renderer.clone();
 
         // Create a channel to speak to the drawer. Every time we send to this channel we want to trigger a draw;
