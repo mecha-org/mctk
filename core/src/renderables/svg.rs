@@ -65,13 +65,11 @@ impl Svg {
             canvas.set_transform(&canvas_transform);
 
             if let Some(fill) = fill {
-                // let mut fill = fill.clone();
                 fill.set_anti_alias(true);
                 canvas.fill_path(&path, &fill);
             }
 
             if let Some(stroke) = stroke {
-                // let mut stroke = stroke.clone();
                 stroke.set_anti_alias(true);
                 canvas.stroke_path(&path, &stroke);
             }

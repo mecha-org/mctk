@@ -46,46 +46,58 @@ impl Component for App {
                      cross_alignment: Alignment::Center,
                 ]
             )
-            // .push(
-            //     node!(
-            //         widgets::Div::new().bg(Color::rgba(0., 0., 0., 0.)),
-            //         lay![size: size!(24.0, 24.0),
-            //              axis_alignment: Alignment::Start,
-            //              cross_alignment: Alignment::Center,
-            //         ]
-            //     )
-            //     .push(node!(Svg::new(svg_name.clone()), lay!(size: size!(16.0, 16.0), ),)),
-            // )
-            // .push(
-            //     node!(
-            //         widgets::Div::new().bg(Color::rgba(0., 0., 0., 0.)),
-            //         lay![size: size!(36.0, 36.0),
-            //              axis_alignment: Alignment::Start,
-            //              cross_alignment: Alignment::Center,
-            //         ]
-            //     )
-            //     .push(node!(Svg::new(svg_name.clone()), lay!(size: size!(24.0, 24.0), ),)),
-            // )
-            // .push(
-            //     node!(
-            //         widgets::Div::new().bg(Color::rgba(0., 0., 0., 0.)),
-            //         lay![size: size!(48.0, 48.0),
-            //              axis_alignment: Alignment::Start,
-            //              cross_alignment: Alignment::Center,
-            //         ]
-            //     )
-            //     .push(node!(Svg::new(svg_name.clone()), lay!(size: size!(32.0, 32.0), ),)),
-            // )
-            // .push(
-            //     node!(
-            //         widgets::Div::new().bg(Color::rgba(0., 0., 0., 0.)),
-            //         lay![size: size!(84.0, 84.0),
-            //              axis_alignment: Alignment::Start,
-            //              cross_alignment: Alignment::Center,
-            //         ]
-            //     )
-            //     .push(node!(Svg::new(svg_name.clone()), lay!(size: size!(64.0, 64.0), ),)),
-            // )
+            .push(
+                node!(
+                    widgets::Div::new().bg(Color::rgba(0., 0., 0., 0.)),
+                    lay![size: size!(24.0, 24.0),
+                         axis_alignment: Alignment::Start,
+                         cross_alignment: Alignment::Center,
+                    ]
+                )
+                .push(node!(
+                    Svg::new(svg_name.clone()),
+                    lay!(size: size!(16.0, 16.0), ),
+                )),
+            )
+            .push(
+                node!(
+                    widgets::Div::new().bg(Color::rgba(0., 0., 0., 0.)),
+                    lay![size: size!(36.0, 36.0),
+                         axis_alignment: Alignment::Start,
+                         cross_alignment: Alignment::Center,
+                    ]
+                )
+                .push(node!(
+                    Svg::new(svg_name.clone()),
+                    lay!(size: size!(24.0, 24.0), ),
+                )),
+            )
+            .push(
+                node!(
+                    widgets::Div::new().bg(Color::rgba(0., 0., 0., 0.)),
+                    lay![size: size!(48.0, 48.0),
+                         axis_alignment: Alignment::Start,
+                         cross_alignment: Alignment::Center,
+                    ]
+                )
+                .push(node!(
+                    Svg::new(svg_name.clone()),
+                    lay!(size: size!(32.0, 32.0), ),
+                )),
+            )
+            .push(
+                node!(
+                    widgets::Div::new().bg(Color::rgba(0., 0., 0., 0.)),
+                    lay![size: size!(84.0, 84.0),
+                         axis_alignment: Alignment::Start,
+                         cross_alignment: Alignment::Center,
+                    ]
+                )
+                .push(node!(
+                    Svg::new(svg_name.clone()),
+                    lay!(size: size!(64.0, 64.0), ),
+                )),
+            )
             .push(
                 node!(
                     widgets::Div::new().bg(Color::rgba(0., 0., 0., 0.)),
@@ -128,7 +140,10 @@ async fn main() -> anyhow::Result<()> {
     assets.insert("bg".to_string(), "src/assets/icons/bg.png".to_string());
 
     let mut svgs = HashMap::new();
-
+    svgs.insert(
+        "battery".to_string(),
+        "src/assets/icons/battery.svg".to_string(),
+    );
     svgs.insert(
         "android".to_string(),
         "src/assets/svgs/android.svg".to_string(),
