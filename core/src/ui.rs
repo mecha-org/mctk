@@ -4,11 +4,12 @@ use crate::input::*;
 use crate::instrumenting::*;
 use crate::layout::*;
 use crate::raw_handle::RawWaylandHandle;
+use crate::renderer::Renderer;
 use crate::{component::Component, node::Node, types::PixelSize};
 use crate::{
     lay,
     node::Registration,
-    renderer::{canvas::CanvasContext, Renderer},
+    // renderer::{canvas::CanvasContext, Renderer},
     size,
     types::*,
     window::Window,

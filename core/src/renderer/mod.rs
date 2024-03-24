@@ -1,6 +1,8 @@
 pub mod canvas;
 pub mod text;
 pub mod gl;
+pub mod svg;
+
 use std::{
     fmt,
     sync::{Arc, RwLock},

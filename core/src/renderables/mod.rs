@@ -15,13 +15,6 @@ pub use rect::Rect;
 pub use svg::Svg;
 pub use text::Text;
 
-use crate::renderer::canvas::SvgData;
-
-use self::types::Canvas;
-
-use femtovg::{FontId, ImageId, Paint, Path};
-use std::collections::HashMap;
-
 #[derive(Debug)]
 pub enum Renderable {
     Rect(Rect),
