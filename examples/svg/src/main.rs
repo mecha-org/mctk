@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use mctk_core::component::{Component, Message, RenderContext, RootComponent};
 use mctk_core::layout::Alignment;
 use mctk_core::reexports::cosmic_text;
@@ -12,14 +11,11 @@ use mctk_smithay::layer_surface::LayerOptions;
 use mctk_smithay::layer_window::LayerWindowParams;
 use mctk_smithay::WindowOptions;
 use smithay_client_toolkit::shell::wlr_layer;
+use std::collections::HashMap;
 use tracing_subscriber::EnvFilter;
 
-
 #[derive(Debug, Default)]
-pub struct AppState {
-    value: f32,
-    btn_pressed: bool,
-}
+pub struct AppState {}
 
 #[derive(Debug, Clone)]
 enum HelloEvent {
@@ -33,140 +29,93 @@ pub struct App {}
 #[state_component_impl(AppState)]
 impl Component for App {
     fn init(&mut self) {
-        self.state = Some(AppState {
-            value: 30.,
-            btn_pressed: false,
-        })
-    }
-
-    fn render(&mut self, context: RenderContext) -> Option<Vec<Renderable>> {
-        println!("render called");
-
-        let value = self.state_ref().value;
-        // Some(vec![Renderable::Rect(Rect::new(
-        //     [0.0, 0.0].into(),
-        //     [100., 100.0].into(),
-        //     Color::rgb(0., 0., 1.),
-        // ))])
-        None
-    }
-
-    fn on_click(&mut self, _event: &mut mctk_core::event::Event<mctk_core::event::Click>) {
-        let value = self.state_ref().value;
-        println!("app:component:on_click() {}", value);
-        self.state_mut().value = value + 1.;
-
-        self.state_mut().btn_pressed = true;
+        self.state = Some(AppState {})
     }
 
     fn view(&self) -> Option<Node> {
         println!("view called");
 
-        let btn_pressed = self.state_ref().btn_pressed;
-
-        // Some(
-        //     node!(widgets::Div::new().bg(0.7),
-        //            [size_pct: [100, Auto]])
-        //     .push(node!(widgets::Text::new(
-        //          txt!("Lorem")).style("font", "SpaceGrotesk-Bold"),
-        //                  [size_pct: [100.0, Auto], margin: [10]])),
-        // )
-
-        // Some(
-        //     node!(widgets::Div::new().bg(0.7),
-        //            [size_pct: [100, Auto]])
-        //     .push(node!(widgets::Text::new(
-        //     txt!("Lorem"))
-        //     .style("h_alignment", HorizontalPosition::Left)
-        //     .style("font", "SpaceGrotesk-Bold")
-        //     ,
-        //             [
-        //                 size_pct: [100, Auto],
-        //                margin: [10],
-
-        //            ])),
-        // )
-
+        let svg_name = String::from("android");
         Some(
             node!(
                 widgets::Div::new(),
                 lay![size_pct: [100.0],
                      wrap: true,
                     //  padding: [10.0],
-                     axis_alignment: Alignment::Start,
-                     cross_alignment: Alignment::Start,
+                     axis_alignment: Alignment::Center,
+                     cross_alignment: Alignment::Center,
                 ]
-            )
-            .push(node!(
-                Button::new(txt!("Click me!"))
-                    .on_click(Box::new(|| msg!(HelloEvent::Button {
-                        name: "It me, a button!".to_string()
-                    })))
-                    .style(
-                        "background_color",
-                        match btn_pressed {
-                            true => Color::rgb(0., 1.0, 0.),
-                            false => Color::rgb(0., 0.0, 1.),
-                        }
-                    )
-                    .style("font_size", 16.0),
-                lay!(size: size!(60.0, Auto)),
-            ))
-            .push(node!(
-                widgets::Div::new().bg(Color::RED),
-                lay![size: [100.0, 24.0],
-                     wrap: true,
-                    //  padding: [10.0],
-                     axis_alignment: Alignment::Start,
-                     cross_alignment: Alignment::Start,
-                ]
-            ))
-            // .push(node!(
-            //     Button::new(txt!("Click me!."))
-            //         .on_click(Box::new(|| msg!(HelloEvent::Button {
-            //             name: "It me, a button!".to_string()
-            //         })))
-            //         .style(
-            //             "background_color",
-            //             match btn_pressed {
-            //                 true => Color::rgb(0., 1.0, 0.),
-            //                 false => Color::rgb(1., 0.0, 0.),
-            //             }
-            //         ),
-            //     lay!(size: size!(100.0, 60.0 ), margin: [10],),
-            // ))
-            .push(
-                node!(
-                    widgets::Div::new().bg(Color::rgb(0., 1.0, 1.)),
-                    lay![size: size!(100.0, 100.0),
-                         axis_alignment: Alignment::Center,
-                         cross_alignment: Alignment::Center,
-                    ]
-                )
-                .push(node!(Image::new("bg"), lay!(size: size!(40.0, 40.0), ),)),
             )
             .push(
                 node!(
-                    widgets::Div::new().bg(Color::rgb(1., 0., 1.)),
-                    lay![size: size!(100.0, 100.0),
-                         axis_alignment: Alignment::Center,
+                    widgets::Div::new().bg(Color::rgba(0., 0., 0., 0.)),
+                    lay![size: size!(24.0, 24.0),
+                         axis_alignment: Alignment::Start,
                          cross_alignment: Alignment::Center,
                     ]
                 )
-                .push(node!(Svg::new("battery"), lay!(size: size!(32.0, 32.0), ),)),
+                .push(node!(
+                    Svg::new(svg_name.clone()),
+                    lay!(size: size!(16.0, 16.0), ),
+                )),
+            )
+            .push(
+                node!(
+                    widgets::Div::new().bg(Color::rgba(0., 0., 0., 0.)),
+                    lay![size: size!(36.0, 36.0),
+                         axis_alignment: Alignment::Start,
+                         cross_alignment: Alignment::Center,
+                    ]
+                )
+                .push(node!(
+                    Svg::new(svg_name.clone()),
+                    lay!(size: size!(24.0, 24.0), ),
+                )),
+            )
+            .push(
+                node!(
+                    widgets::Div::new().bg(Color::rgba(0., 0., 0., 0.)),
+                    lay![size: size!(48.0, 48.0),
+                         axis_alignment: Alignment::Start,
+                         cross_alignment: Alignment::Center,
+                    ]
+                )
+                .push(node!(
+                    Svg::new(svg_name.clone()),
+                    lay!(size: size!(32.0, 32.0), ),
+                )),
+            )
+            .push(
+                node!(
+                    widgets::Div::new().bg(Color::rgba(0., 0., 0., 0.)),
+                    lay![size: size!(84.0, 84.0),
+                         axis_alignment: Alignment::Start,
+                         cross_alignment: Alignment::Center,
+                    ]
+                )
+                .push(node!(
+                    Svg::new(svg_name.clone()),
+                    lay!(size: size!(64.0, 64.0), ),
+                )),
+            )
+            .push(
+                node!(
+                    widgets::Div::new().bg(Color::rgba(0., 0., 0., 0.)),
+                    lay![size: size!(320.0, 320.0),
+                         axis_alignment: Alignment::Start,
+                         cross_alignment: Alignment::Center,
+                    ]
+                )
+                .push(node!(
+                    Svg::new(svg_name.clone()),
+                    lay!(size: size!(300.0, 300.0), ),
+                )),
             ),
         )
     }
 
     fn update(&mut self, message: Message) -> Vec<Message> {
         println!("App was sent: {:?}", message.downcast_ref::<HelloEvent>());
-        match message.downcast_ref::<HelloEvent>() {
-            Some(HelloEvent::Button { name }) => {
-                println!("{}", name);
-                self.state_mut().btn_pressed = true;
-            }
-            _ => (),
-        }
         vec![]
     }
 }
@@ -194,6 +143,10 @@ async fn main() -> anyhow::Result<()> {
     svgs.insert(
         "battery".to_string(),
         "src/assets/icons/battery.svg".to_string(),
+    );
+    svgs.insert(
+        "android".to_string(),
+        "src/assets/svgs/android.svg".to_string(),
     );
 
     let namespace = "mctk.layer_shell.demo".to_string();

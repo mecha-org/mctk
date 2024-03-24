@@ -1,5 +1,12 @@
-use cosmic_text::{Buffer, FontSystem};
-use femtovg::{Color, FontId, ImageFlags, ImageId, Paint, Path};
+use super::gl::{init_gl, init_gl_canvas};
+use super::svg::{load_svg_paths, SvgData};
+use super::text::TextRenderer;
+use super::Caches;
+use crate::font_cache::FontCache;
+use crate::renderables::Renderable;
+use crate::{node::Node, types::PixelSize};
+use femtovg::renderer::OpenGl;
+use femtovg::{Canvas, Color, ImageFlags, ImageId};
 use glutin::api::egl;
 use glutin::api::egl::context::PossiblyCurrentContext;
 use glutin::api::egl::surface::Surface;
@@ -7,42 +14,13 @@ use glutin::context::PossiblyCurrentContextGlSurfaceAccessor;
 use glutin::surface::{GlSurface, WindowSurface};
 use raw_window_handle::{RawDisplayHandle, RawWindowHandle};
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
 use std::fmt;
-use usvg::TreeParsing;
-use crate::font_cache::FontCache;
-use crate::renderables::Renderable;
-use crate::Scale;
-use crate::{node::Node, types::PixelSize};
-use super::text::TextRenderer;
-use super::gl::{init_gl, init_gl_canvas};
-use super::Caches;
+use std::sync::{Arc, RwLock};
 
-#[derive(Debug)]
-pub struct SvgData {
-    pub paths: Vec<(Path, Option<Paint>, Option<Paint>)>,
-    pub scale: Scale,
-}
-
-
-fn init_canvas_renderer(
-    raw_display_handle: RawDisplayHandle,
-    raw_window_handle: RawWindowHandle,
-    logical_size: PixelSize,
-    scale_factor: f32,
+fn load_assets(
+    gl_canvas: &mut Canvas<OpenGl>,
     assets: HashMap<String, String>,
-) -> (
-    CanvasContext,
-    HashMap<String, ImageId>,
-) {
-    let size = logical_size;
-    let width = size.width;
-    let height = size.height;
-
-    let (gl_display, gl_surface, gl_context) =
-        init_gl(raw_display_handle, raw_window_handle, (width, height));
-    let mut gl_canvas = init_gl_canvas(&gl_display, (width, height), scale_factor);
-
+) -> HashMap<String, ImageId> {
     let mut loaded_assets = HashMap::new();
 
     for (name, path_) in assets.into_iter() {
@@ -55,6 +33,25 @@ fn init_canvas_renderer(
             }
         }
     }
+    loaded_assets
+}
+
+fn init_canvas_renderer(
+    raw_display_handle: RawDisplayHandle,
+    raw_window_handle: RawWindowHandle,
+    logical_size: PixelSize,
+    scale_factor: f32,
+    assets: HashMap<String, String>,
+) -> (CanvasContext, HashMap<String, ImageId>) {
+    let size = logical_size;
+    let width = size.width;
+    let height = size.height;
+
+    let (gl_display, gl_surface, gl_context) =
+        init_gl(raw_display_handle, raw_window_handle, (width, height));
+    let mut gl_canvas = init_gl_canvas(&gl_display, (width, height), scale_factor);
+
+    let loaded_assets = load_assets(&mut gl_canvas, assets);
 
     let canvas_context = CanvasContext {
         gl_canvas,
@@ -70,7 +67,7 @@ pub struct CanvasContext {
     pub gl_context: PossiblyCurrentContext,
     pub gl_surface: egl::surface::Surface<WindowSurface>,
     // femto canvas
-    pub gl_canvas: femtovg::Canvas<femtovg::renderer::OpenGl>,
+    pub gl_canvas: Canvas<OpenGl>,
 }
 
 pub struct CanvasRenderer {
@@ -108,29 +105,7 @@ impl super::Renderer for CanvasRenderer {
         );
         let text_renderer = TextRenderer::new(fonts.clone());
         let svgs = window.svgs();
-        let mut loaded_svgs = HashMap::new();
-
-        for (name, path) in svgs.into_iter() {
-            let svg_data = match std::fs::read(&path) {
-                Ok(file) => file,
-                Err(e) => {
-                    println!("error {:?} path {:?}", e, path);
-                    panic!("{:?}", e);
-                }
-            };
-            let tree = usvg::Tree::from_data(&svg_data, &usvg::Options::default()).unwrap();
-            let width = tree.size.width() as f32;
-            let height = tree.size.height() as f32;
-
-            let paths: Vec<(Path, Option<Paint>, Option<Paint>)> = render_svg(tree);
-            loaded_svgs.insert(
-                name,
-                SvgData {
-                    paths,
-                    scale: Scale { width, height },
-                },
-            );
-        }
+        let mut loaded_svgs = load_svg_paths(svgs, fonts.clone());
 
         Self {
             fonts: fonts.clone(),
@@ -194,7 +169,7 @@ impl super::Renderer for CanvasRenderer {
                     image.render(canvas, &self.assets);
                 }
                 Renderable::Svg(svg) => {
-                    svg.render(canvas, &self.svgs);
+                    svg.render(canvas, &mut self.svgs);
                 }
                 Renderable::Text(text) => {
                     text.render(canvas, text_renderer);
@@ -217,64 +192,7 @@ impl super::Renderer for CanvasRenderer {
     /// This default is provided for tests, it should be overridden
     fn caches(&self) -> Caches {
         Caches {
-            font: Arc::new(RwLock::new(FontCache::new(self.fonts.clone())))
+            font: Arc::new(RwLock::new(FontCache::new(self.fonts.clone()))),
         }
     }
-}
-
-fn render_svg(svg: usvg::Tree) -> Vec<(Path, Option<Paint>, Option<Paint>)> {
-    use usvg::NodeKind;
-    use usvg::PathSegment;
-
-    let mut paths = Vec::new();
-
-    for node in svg.root.descendants() {
-        if let NodeKind::Path(svg_path) = &*node.borrow() {
-            let mut path = Path::new();
-
-            for command in svg_path.data.segments() {
-                match command {
-                    PathSegment::MoveTo { x, y } => path.move_to(x as f32, y as f32),
-                    PathSegment::LineTo { x, y } => path.line_to(x as f32, y as f32),
-                    PathSegment::CurveTo {
-                        x1,
-                        y1,
-                        x2,
-                        y2,
-                        x,
-                        y,
-                    } => path.bezier_to(
-                        x1 as f32, y1 as f32, x2 as f32, y2 as f32, x as f32, y as f32,
-                    ),
-                    PathSegment::ClosePath => path.close(),
-                }
-            }
-
-            let to_femto_color = |usvg_paint: &usvg::Paint| match usvg_paint {
-                usvg::Paint::Color(usvg::Color { red, green, blue }) => {
-                    Some(Color::rgb(*red, *green, *blue))
-                }
-                _ => None,
-            };
-
-            let fill = svg_path
-                .fill
-                .as_ref()
-                .and_then(|fill| to_femto_color(&fill.paint))
-                .map(|col| Paint::color(col).with_anti_alias(true));
-
-            let stroke = svg_path.stroke.as_ref().and_then(|stroke| {
-                to_femto_color(&stroke.paint).map(|paint| {
-                    let mut stroke_paint = Paint::color(paint);
-                    stroke_paint.set_line_width(stroke.width.get() as f32);
-                    stroke_paint.set_anti_alias(true);
-                    stroke_paint
-                })
-            });
-
-            paths.push((path, fill, stroke))
-        }
-    }
-
-    paths
 }
