@@ -62,6 +62,7 @@ impl LayerWindow {
         } = params;
 
         let (window_tx, window_rx) = calloop::channel::channel();
+        let layer_shell_opts_2 = layer_shell_opts.clone();
 
         let (app_window, event_loop) =
             LayerShellSctkWindow::new(window_tx.clone(), window_opts, layer_shell_opts)
@@ -82,8 +83,6 @@ impl LayerWindow {
             svgs,
         });
 
-        // let sig = event_loop.get_signal();
-
         // insert handle
         let handle = event_loop.handle();
         let _ = handle.insert_source(
@@ -103,6 +102,10 @@ impl LayerWindow {
                             }
                             WindowMessage::Send { message } => {
                                 ui.update(message);
+                            }
+                            WindowMessage::Resize { width, height } => {
+                                let mut layer_shell = layer_shell_opts_2.clone();
+                                app_window.reconfigure(width, height, layer_shell);
                             }
                             WindowMessage::MainEventsCleared => {
                                 ui.draw();

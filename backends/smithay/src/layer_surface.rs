@@ -1,9 +1,18 @@
-use crate::{keyboard::KeyboardEvent, new_raw_wayland_handle, pointer::{convert_button, MouseEvent, Point, ScrollDelta}, touch::{Position, TouchEvent, TouchPoint}, PhysicalPosition, WindowEvent, WindowMessage, WindowOptions
+use crate::{
+    keyboard::KeyboardEvent,
+    new_raw_wayland_handle,
+    pointer::{convert_button, MouseEvent, Point, ScrollDelta},
+    touch::{Position, TouchEvent, TouchPoint},
+    PhysicalPosition, WindowEvent, WindowMessage, WindowOptions,
 };
 use ahash::AHashMap;
 use anyhow::Context;
 use smithay_client_toolkit::{
-    compositor::{CompositorHandler, CompositorState}, delegate_compositor, delegate_keyboard, delegate_layer, delegate_output, delegate_pointer, delegate_registry, delegate_seat, delegate_touch, output::{OutputHandler, OutputState}, reexports::{
+    compositor::{CompositorHandler, CompositorState},
+    delegate_compositor, delegate_keyboard, delegate_layer, delegate_output, delegate_pointer,
+    delegate_registry, delegate_seat, delegate_touch,
+    output::{OutputHandler, OutputState},
+    reexports::{
         calloop::{channel::Sender, EventLoop},
         calloop_wayland_source::WaylandSource,
         client::{
@@ -17,14 +26,24 @@ use smithay_client_toolkit::{
             },
             Connection, QueueHandle,
         },
-    }, registry::{ProvidesRegistryState, RegistryState}, registry_handlers, seat::{
-        keyboard::{KeyEvent, KeyboardHandler, Keysym, Modifiers}, pointer::{PointerEvent, PointerEventKind, PointerHandler}, touch::TouchHandler, Capability, SeatHandler, SeatState
-    }, shell::{
+    },
+    registry::{ProvidesRegistryState, RegistryState},
+    registry_handlers,
+    seat::{
+        keyboard::{KeyEvent, KeyboardHandler, Keysym, Modifiers},
+        pointer::{PointerEvent, PointerEventKind, PointerHandler},
+        touch::TouchHandler,
+        Capability, SeatHandler, SeatState,
+    },
+    shell::{
         wlr_layer::{self, LayerShell, LayerShellHandler, LayerSurface},
         WaylandSurface,
-    }
+    },
 };
-use wayland_client::protocol::{wl_display::WlDisplay, wl_touch::{self, WlTouch}};
+use wayland_client::protocol::{
+    wl_display::WlDisplay,
+    wl_touch::{self, WlTouch},
+};
 
 pub struct LayerShellSctkWindow {
     window_tx: Sender<WindowMessage>,
@@ -46,6 +65,7 @@ pub struct LayerShellSctkWindow {
     exit: bool,
 }
 
+#[derive(Debug, Clone)]
 pub struct LayerOptions {
     pub anchor: wlr_layer::Anchor,
     pub layer: wlr_layer::Layer,
@@ -175,6 +195,20 @@ impl LayerShellSctkWindow {
             height,
             wayland_handle,
         });
+    }
+
+    pub fn reconfigure(&mut self, width: u32, height: u32, layer_opts: LayerOptions) {
+        let layer = &mut self.layer;
+
+        // set layer shell props
+        layer.set_keyboard_interactivity(layer_opts.keyboard_interactivity);
+        layer.set_size(width, height);
+        layer.set_anchor(layer_opts.anchor);
+        layer.set_exclusive_zone(layer_opts.zone);
+
+        layer.commit();
+
+        let _ = &self.send_configure_event(width, height);
     }
 }
 
@@ -482,12 +516,24 @@ impl TouchHandler for LayerShellSctkWindow {
         let scale_factor = self.scale_factor;
 
         // insert the touch point
-        self.touch_map.insert(id, TouchPoint { surface, position: Position { x: position.0 as f32, y: position.1 as f32 } });
+        self.touch_map.insert(
+            id,
+            TouchPoint {
+                surface,
+                position: Position {
+                    x: position.0 as f32,
+                    y: position.1 as f32,
+                },
+            },
+        );
 
         self.send_window_event(WindowEvent::Touch(TouchEvent::Down {
             id,
             time,
-            position: Position { x: position.0 as f32, y: position.1 as f32 },
+            position: Position {
+                x: position.0 as f32,
+                y: position.1 as f32,
+            },
             scale_factor,
         }));
     }
@@ -510,7 +556,10 @@ impl TouchHandler for LayerShellSctkWindow {
         self.send_window_event(WindowEvent::Touch(TouchEvent::Up {
             id,
             time,
-            position: Position { x: touch_point.position.x, y: touch_point.position.y },
+            position: Position {
+                x: touch_point.position.x,
+                y: touch_point.position.y,
+            },
             scale_factor,
         }));
     }
@@ -530,11 +579,17 @@ impl TouchHandler for LayerShellSctkWindow {
             None => return,
         };
 
-        touch_point.position = Position { x: position.0 as f32, y: position.1 as f32 };
+        touch_point.position = Position {
+            x: position.0 as f32,
+            y: position.1 as f32,
+        };
         self.send_window_event(WindowEvent::Touch(TouchEvent::Motion {
             id,
             time,
-            position: Position { x: position.0 as f32, y: position.0 as f32 },
+            position: Position {
+                x: position.0 as f32,
+                y: position.0 as f32,
+            },
             scale_factor,
         }));
     }
@@ -551,29 +606,20 @@ impl TouchHandler for LayerShellSctkWindow {
         // blank
     }
 
-    fn orientation(
-        &mut self,
-        _: &Connection,
-        _: &QueueHandle<Self>,
-        _: &WlTouch,
-        _: i32,
-        _: f64,
-    ) {
+    fn orientation(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &WlTouch, _: i32, _: f64) {
         // blank
     }
 
-    fn cancel(
-        &mut self,
-        _: &Connection,
-        _: &QueueHandle<Self>,
-        _: &WlTouch
-    ) {
+    fn cancel(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &WlTouch) {
         let scale_factor = self.scale_factor;
         for (id, tp) in self.touch_map.clone().into_iter() {
             let touch_point = tp.clone();
-            self.send_window_event(WindowEvent::Touch(TouchEvent::Cancel { 
+            self.send_window_event(WindowEvent::Touch(TouchEvent::Cancel {
                 id,
-                position: Position { x: touch_point.position.x, y: touch_point.position.y },
+                position: Position {
+                    x: touch_point.position.x,
+                    y: touch_point.position.y,
+                },
                 scale_factor,
             }));
         }

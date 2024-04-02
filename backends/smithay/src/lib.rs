@@ -1,9 +1,9 @@
+mod keyboard;
 pub mod layer_surface;
 pub mod layer_window;
 pub mod lock_surface;
 pub mod lock_window;
 mod pointer;
-mod keyboard;
 mod touch;
 
 use keyboard::KeyboardEvent;
@@ -38,6 +38,10 @@ pub enum WindowMessage {
     },
     MainEventsCleared,
     RedrawRequested,
+    Resize {
+        width: u32,
+        height: u32,
+    },
     Send {
         message: component::Message,
     },
@@ -54,7 +58,6 @@ pub enum WindowEvent {
     Keyboard(KeyboardEvent),
     Touch(TouchEvent),
 }
-
 
 pub fn new_raw_wayland_handle(wl_display: &WlDisplay, wl_surface: &WlSurface) -> RawWaylandHandle {
     let wayland_handle = {

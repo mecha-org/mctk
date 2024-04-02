@@ -15,6 +15,7 @@ use crate::{
     window::Window,
 };
 use crossbeam_channel::{unbounded, Receiver, Sender};
+use std::time::Duration;
 use std::{
     cell::UnsafeCell,
     marker::PhantomData,
@@ -33,7 +34,7 @@ pub struct UI<W: Window, A: Component + Default + Send + Sync> {
     // _render_thread: JoinHandle<()>,
     _draw_thread: Option<JoinHandle<()>>,
     // render_channel: Sender<()>,
-    draw_channel: Option<Sender<()>>,
+    draw_channel: Option<Sender<DrawMessage>>,
     node: Arc<RwLock<Node>>,
     phantom_app: PhantomData<A>,
     registrations: Arc<RwLock<Vec<Registration>>>,
@@ -50,6 +51,11 @@ thread_local!(
         UnsafeCell::new(None)
     }
 );
+
+enum DrawMessage {
+    Draw,
+    Terminate,
+}
 
 // fn immediate_focus() -> Option<u64> {
 //     *IMMEDIATE_FOCUS.with(|r| unsafe { r.get().as_ref().unwrap() })
@@ -99,7 +105,7 @@ impl<W: 'static + Window, A: 'static + RootComponent + Component + Default + Sen
     }
 
     fn draw_thread(
-        receiver: Receiver<()>,
+        receiver: Receiver<DrawMessage>,
         renderer: Arc<RwLock<Option<ActiveRenderer>>>,
         node: Arc<RwLock<Node>>,
         scale_factor: Arc<RwLock<f32>>,
@@ -109,56 +115,64 @@ impl<W: 'static + Window, A: 'static + RootComponent + Component + Default + Sen
         window: Arc<RwLock<W>>,
     ) -> JoinHandle<()> {
         thread::spawn(move || {
-            for _ in receiver.iter() {
-                if *node_dirty.read().unwrap() {
-                    // Set the node to clean right away so that concurrent events can reset it to dirty
-                    *node_dirty.write().unwrap() = false;
-                    inst("UI::draw");
-                    let logical_size = window.read().unwrap().logical_size();
-                    let scale_factor = *scale_factor.read().unwrap();
-                    let mut new = Node::new(
-                        Box::<A>::default(),
-                        0,
-                        lay!(size: size!(logical_size.width as f32, logical_size.height as f32)),
-                    );
+            for msg in receiver.iter() {
+                match msg {
+                    DrawMessage::Draw => {
+                        if *node_dirty.read().unwrap() {
+                            // Set the node to clean right away so that concurrent events can reset it to dirty
+                            *node_dirty.write().unwrap() = false;
+                            inst("UI::draw");
+                            let logical_size = window.read().unwrap().logical_size();
+                            let scale_factor = *scale_factor.read().unwrap();
+                            let mut new = Node::new(
+                                Box::<A>::default(),
+                                0,
+                                lay!(size: size!(logical_size.width as f32, logical_size.height as f32)),
+                            );
 
-                    {
-                        // We need to lock the renderer while we modify the node, so that we don't try to render it while doing so
-                        // Since this will cause a deadlock
-                        let mut renderer = renderer.write().unwrap();
+                            {
+                                // We need to lock the renderer while we modify the node, so that we don't try to render it while doing so
+                                // Since this will cause a deadlock
+                                let mut renderer = renderer.write().unwrap();
 
-                        if renderer.is_none() {
-                            *node_dirty.write().unwrap() = true;
-                            return;
+                                if renderer.is_none() {
+                                    *node_dirty.write().unwrap() = true;
+                                    return;
+                                }
+
+                                // We need to acquire a lock on the node once we `view` it, because we remove its state at this point
+                                let mut old = node.write().unwrap();
+                                inst("Node::view");
+                                let mut new_registrations: Vec<Registration> = vec![];
+                                new.view(Some(&mut old), &mut new_registrations);
+                                *registrations.write().unwrap() = new_registrations;
+                                inst_end();
+
+                                let caches = renderer.as_mut().unwrap().caches();
+                                inst("Node::layout");
+                                new.layout(&old, &mut caches.font.write().unwrap(), scale_factor);
+                                inst_end();
+
+                                inst("Node::render");
+                                let do_render = new.render(caches, Some(&mut old), scale_factor);
+                                inst_end();
+
+                                *old = new;
+
+                                if do_render {
+                                    window.write().unwrap().redraw();
+                                }
+                                *frame_dirty.write().unwrap() = true;
+                            }
+
+                            inst_end();
                         }
-
-                        // We need to acquire a lock on the node once we `view` it, because we remove its state at this point
-                        let mut old = node.write().unwrap();
-                        inst("Node::view");
-                        let mut new_registrations: Vec<Registration> = vec![];
-                        new.view(Some(&mut old), &mut new_registrations);
-                        *registrations.write().unwrap() = new_registrations;
-                        inst_end();
-
-                        let caches = renderer.as_mut().unwrap().caches();
-                        inst("Node::layout");
-                        new.layout(&old, &mut caches.font.write().unwrap(), scale_factor);
-                        inst_end();
-
-                        inst("Node::render");
-                        let do_render = new.render(caches, Some(&mut old), scale_factor);
-                        inst_end();
-
-                        *old = new;
-
-                        if do_render {
-                            window.write().unwrap().redraw();
-                        }
-                        *frame_dirty.write().unwrap() = true;
                     }
-
-                    inst_end();
-                }
+                    DrawMessage::Terminate => {
+                        println!("terminated");
+                        break;
+                    }
+                };
             }
         })
     }
@@ -215,7 +229,15 @@ impl<W: 'static + Window, A: 'static + RootComponent + Component + Default + Sen
     }
 
     pub fn configure(&mut self, width: u32, height: u32, wayland_handle: RawWaylandHandle) {
-        // block are intentional to drop window
+        println!("ui:configure {} {}", width, height);
+
+        let draw_channel = &self.draw_channel;
+        // get the channel for the current draw thread
+        let mut existing_draw_channel: Option<Sender<DrawMessage>> = None;
+        if draw_channel.is_some() {
+            existing_draw_channel = Some(draw_channel.as_ref().unwrap().clone());
+        }
+
         {
             let mut window = self.window.write().unwrap();
 
@@ -232,7 +254,7 @@ impl<W: 'static + Window, A: 'static + RootComponent + Component + Default + Sen
         self.renderer = renderer.clone();
 
         // Create a channel to speak to the drawer. Every time we send to this channel we want to trigger a draw;
-        let (draw_channel, receiver) = unbounded::<()>();
+        let (draw_channel, receiver) = unbounded::<DrawMessage>();
         let node = self.node.clone();
         let scale_factor = Arc::new(RwLock::new(window.clone().read().unwrap().scale_factor()));
         let frame_dirty = self.frame_dirty.clone();
@@ -253,6 +275,17 @@ impl<W: 'static + Window, A: 'static + RootComponent + Component + Default + Sen
 
         self._draw_thread = Some(draw_thread);
         self.draw_channel = Some(draw_channel);
+
+        // mark node dirty, so that we can redraw
+        *self.node_dirty.write().unwrap() = true;
+
+        // if there was a current draw thread, send terminate
+        if existing_draw_channel.is_some() {
+            let _ = existing_draw_channel
+                .as_ref()
+                .unwrap()
+                .send(DrawMessage::Terminate);
+        }
     }
 
     /// Signal to the draw thread that it may be time to draw a redraw the app.
@@ -268,7 +301,11 @@ impl<W: 'static + Window, A: 'static + RootComponent + Component + Default + Sen
     /// A draw will only occur if an event was handled that resulted in [`state_mut`][crate::state_component_impl] being called.
     pub fn draw(&mut self) {
         if self.draw_channel.is_some() {
-            self.draw_channel.as_ref().unwrap().send(()).unwrap();
+            self.draw_channel
+                .as_ref()
+                .unwrap()
+                .send(DrawMessage::Draw)
+                .unwrap();
         }
     }
 
