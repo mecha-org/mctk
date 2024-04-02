@@ -103,6 +103,7 @@ impl SessionLockWindow {
                             WindowMessage::Send { message } => {
                                 ui.update(message);
                             }
+                            WindowMessage::Resize { width, height } => {}
                             WindowMessage::MainEventsCleared => {
                                 ui.draw();
                                 ui.render();

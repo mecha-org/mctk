@@ -10,7 +10,7 @@ use femtovg::{Canvas, Color, ImageFlags, ImageId};
 use glutin::api::egl;
 use glutin::api::egl::context::PossiblyCurrentContext;
 use glutin::api::egl::surface::Surface;
-use glutin::context::PossiblyCurrentContextGlSurfaceAccessor;
+use glutin::context::{PossiblyCurrentContextGlSurfaceAccessor, PossiblyCurrentGlContext};
 use glutin::surface::{GlSurface, WindowSurface};
 use raw_window_handle::{RawDisplayHandle, RawWindowHandle};
 use std::collections::HashMap;
@@ -46,6 +46,8 @@ fn init_canvas_renderer(
     let size = logical_size;
     let width = size.width;
     let height = size.height;
+
+    println!("renderer:init_canvas_renderer {} {}", width, height);
 
     let (gl_display, gl_surface, gl_context) =
         init_gl(raw_display_handle, raw_window_handle, (width, height));
@@ -130,6 +132,9 @@ impl super::Renderer for CanvasRenderer {
             window.assets(),
         );
 
+        let text_renderer = TextRenderer::new(self.fonts.clone());
+
+        self.text_renderer = text_renderer;
         self.scale_factor = scale_factor;
         self.context = canvas_context;
         self.assets = assets;
@@ -194,5 +199,11 @@ impl super::Renderer for CanvasRenderer {
         Caches {
             font: Arc::new(RwLock::new(FontCache::new(self.fonts.clone()))),
         }
+    }
+}
+
+impl Drop for CanvasRenderer {
+    fn drop(&mut self) {
+        println!("drop renderer");
     }
 }
