@@ -109,8 +109,7 @@ impl LayerWindow {
                                 ui.update(message);
                             }
                             WindowMessage::Resize { width, height } => {
-                                let mut layer_shell = layer_shell_opts_2.clone();
-                                layer_shell.zone = 100;
+                                let layer_shell = layer_shell_opts_2.clone();
                                 app_window.resize(width, height, layer_shell);
                                 ui.resize(width, height);
                                 ui.draw();
