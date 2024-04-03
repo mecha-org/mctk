@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-use std::time::Duration;
 use mctk_core::component::{Component, Message, RenderContext, RootComponent};
 use mctk_core::reexports::cosmic_text;
 use mctk_core::renderables::{types, Renderable};
@@ -11,7 +9,12 @@ use mctk_macros::{component, state_component_impl};
 use mctk_smithay::lock_window::SessionLockWindowParams;
 use mctk_smithay::WindowOptions;
 use smithay_client_toolkit::reexports::calloop;
+use std::collections::HashMap;
+use std::time::Duration;
 use tracing_subscriber::EnvFilter;
+
+// App level channel
+pub enum AppMessage {}
 
 #[derive(Debug, Default)]
 pub struct AppState {
@@ -99,16 +102,18 @@ async fn main() -> anyhow::Result<()> {
 
     let (session_lock_tx, session_lock_rx) = calloop::channel::channel();
 
-    let (mut app, mut event_loop, ..) = mctk_smithay::lock_window::SessionLockWindow::open_blocking::<
-        App,
-    >(SessionLockWindowParams {
-        window_opts,
-        fonts,
-        assets,
-        svgs,
-        session_lock_tx,
-        session_lock_rx,
-    });
+    let (mut app, mut event_loop, ..) =
+        mctk_smithay::lock_window::SessionLockWindow::open_blocking::<App, AppMessage>(
+            SessionLockWindowParams {
+                window_opts,
+                fonts,
+                assets,
+                svgs,
+                session_lock_tx,
+                session_lock_rx,
+            },
+            None,
+        );
     loop {
         event_loop
             .dispatch(Duration::from_millis(16), &mut app)
@@ -118,4 +123,4 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-impl RootComponent for App {}
+impl RootComponent<AppMessage> for App {}

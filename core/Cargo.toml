@@ -40,6 +40,7 @@ usvg = { version = "0.40.0" }
 lazy_static = "1.4.0"
 sys-locale = "0.3.1"
 glyph_brush_layout = "0.2"
+smithay-client-toolkit = "0.18.0"
 
 # features
 superluminal-perf = { version = "0.1", optional = true }

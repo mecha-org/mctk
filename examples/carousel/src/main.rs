@@ -1,18 +1,21 @@
-use std::collections::HashMap;
-use std::time::Duration;
 use mctk_core::component::{Component, RootComponent};
 use mctk_core::reexports::cosmic_text;
 use mctk_core::renderables::types;
 use mctk_core::widgets::{Carousel, Div};
-use mctk_core::lay;
+use mctk_core::{lay, size};
 use mctk_core::{node, node::Node};
 use mctk_smithay::layer_surface::LayerOptions;
 use mctk_smithay::layer_window::LayerWindowParams;
 use mctk_smithay::WindowOptions;
 use smithay_client_toolkit::shell::wlr_layer;
+use std::collections::HashMap;
+use std::time::Duration;
 use tracing_subscriber::EnvFilter;
 
 type Point = types::Point<f32>;
+
+// App level channel
+pub enum AppMessage {}
 
 #[derive(Debug, Clone)]
 enum HelloEvent {
@@ -133,15 +136,18 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let (mut app, mut event_loop, ..) =
-        mctk_smithay::layer_window::LayerWindow::open_blocking::<App>(LayerWindowParams {
-            title: "Hello scroll!".to_string(),
-            namespace,
-            window_opts,
-            fonts,
-            assets,
-            svgs,
-            layer_shell_opts,
-        });
+        mctk_smithay::layer_window::LayerWindow::open_blocking::<App, AppMessage>(
+            LayerWindowParams {
+                title: "Hello scroll!".to_string(),
+                namespace,
+                window_opts,
+                fonts,
+                assets,
+                svgs,
+                layer_shell_opts,
+            },
+            None,
+        );
 
     // event_loop
     // .run(None, &mut app, |_| {
@@ -196,4 +202,4 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-impl RootComponent for App {}
+impl RootComponent<AppMessage> for App {}

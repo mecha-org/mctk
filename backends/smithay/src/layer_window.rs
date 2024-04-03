@@ -41,15 +41,17 @@ pub struct LayerWindowParams {
 }
 
 impl LayerWindow {
-    pub fn open_blocking<A>(
+    pub fn open_blocking<A, B>(
         params: LayerWindowParams,
+        app_channel: Option<Sender<B>>,
     ) -> (
         LayerShellSctkWindow,
         EventLoop<'static, LayerShellSctkWindow>,
         Sender<WindowMessage>,
     )
     where
-        A: 'static + RootComponent + Component + Default + Send + Sync,
+        A: 'static + RootComponent<B> + Component + Default + Send + Sync,
+        B: 'static,
     {
         let LayerWindowParams {
             title,
@@ -72,16 +74,19 @@ impl LayerWindow {
         //     SessionLockWindow::new(window_tx.clone(), window_opts)
         //         .expect("failed to create application");
 
-        let mut ui: UI<LayerWindow, A> = UI::new(LayerWindow {
-            width: app_window.width,
-            height: app_window.height,
-            handle: None,
-            scale_factor: app_window.scale_factor,
-            window_tx: window_tx.clone(),
-            fonts,
-            assets,
-            svgs,
-        });
+        let mut ui: UI<LayerWindow, A, B> = UI::new(
+            LayerWindow {
+                width: app_window.width,
+                height: app_window.height,
+                handle: None,
+                scale_factor: app_window.scale_factor,
+                window_tx: window_tx.clone(),
+                fonts,
+                assets,
+                svgs,
+            },
+            app_channel,
+        );
 
         // insert handle
         let handle = event_loop.handle();
@@ -105,7 +110,11 @@ impl LayerWindow {
                             }
                             WindowMessage::Resize { width, height } => {
                                 let mut layer_shell = layer_shell_opts_2.clone();
-                                app_window.reconfigure(width, height, layer_shell);
+                                layer_shell.zone = 100;
+                                app_window.resize(width, height, layer_shell);
+                                ui.resize(width, height);
+                                ui.draw();
+                                ui.render();
                             }
                             WindowMessage::MainEventsCleared => {
                                 ui.draw();

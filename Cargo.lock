@@ -1224,6 +1224,7 @@ dependencies = [
  "resource",
  "rgb",
  "serde",
+ "smithay-client-toolkit 0.18.1",
  "superluminal-perf",
  "swash",
  "sys-locale",
