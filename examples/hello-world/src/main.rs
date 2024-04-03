@@ -15,6 +15,9 @@ use mctk_smithay::WindowOptions;
 use smithay_client_toolkit::shell::wlr_layer;
 use tracing_subscriber::EnvFilter;
 
+// App level channel
+pub enum AppMessage {}
+
 #[derive(Debug, Default)]
 pub struct AppState {
     value: f32,
@@ -110,15 +113,18 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let (mut app, mut event_loop, ..) =
-        mctk_smithay::layer_window::LayerWindow::open_blocking::<App>(LayerWindowParams {
-            title: "Hello world!".to_string(),
-            namespace,
-            window_opts,
-            fonts,
-            assets,
-            svgs,
-            layer_shell_opts,
-        });
+        mctk_smithay::layer_window::LayerWindow::open_blocking::<App, AppMessage>(
+            LayerWindowParams {
+                title: "Hello world!".to_string(),
+                namespace,
+                window_opts,
+                fonts,
+                assets,
+                svgs,
+                layer_shell_opts,
+            },
+            None,
+        );
     loop {
         event_loop
             .dispatch(Duration::from_millis(16), &mut app)
@@ -128,4 +134,4 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-impl RootComponent for App {}
+impl RootComponent<AppMessage> for App {}

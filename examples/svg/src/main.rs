@@ -1,8 +1,6 @@
-use mctk_core::component::{Component, Message, RenderContext, RootComponent};
+use mctk_core::component::{Component, Message, RootComponent};
 use mctk_core::layout::Alignment;
 use mctk_core::reexports::cosmic_text;
-use mctk_core::renderables::Renderable;
-use mctk_core::style::Styled;
 use mctk_core::widgets::{self, Button, Image, Svg};
 use mctk_core::{lay, msg, size, size_pct, txt, Color};
 use mctk_core::{node, node::Node};
@@ -13,6 +11,9 @@ use mctk_smithay::WindowOptions;
 use smithay_client_toolkit::shell::wlr_layer;
 use std::collections::HashMap;
 use tracing_subscriber::EnvFilter;
+
+// App level channel
+pub enum AppMessage {}
 
 #[derive(Debug, Default)]
 pub struct AppState {}
@@ -166,15 +167,18 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let (mut app, mut event_loop, ..) =
-        mctk_smithay::layer_window::LayerWindow::open_blocking::<App>(LayerWindowParams {
-            title: "Hello scroll!".to_string(),
-            namespace,
-            window_opts,
-            fonts,
-            assets,
-            svgs,
-            layer_shell_opts,
-        });
+        mctk_smithay::layer_window::LayerWindow::open_blocking::<App, AppMessage>(
+            LayerWindowParams {
+                title: "Hello scroll!".to_string(),
+                namespace,
+                window_opts,
+                fonts,
+                assets,
+                svgs,
+                layer_shell_opts,
+            },
+            None,
+        );
 
     // event_loop
     // .run(None, &mut app, |_| {
@@ -227,4 +231,4 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-impl RootComponent for App {}
+impl RootComponent<AppMessage> for App {}

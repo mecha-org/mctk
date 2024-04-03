@@ -11,6 +11,7 @@ use crate::renderer::Caches;
 use crate::types::*;
 use crate::window::Window;
 use ahash::AHasher;
+use smithay_client_toolkit::reexports::calloop;
 
 /// A `Box<dyn Any>` type, used to convey information from a [`Component`] to one of its parent nodes. Passed to [`Event#emit`][Event#method.emit].
 pub type Message = Box<dyn Any>;
@@ -254,7 +255,7 @@ pub trait Component: fmt::Debug {
     fn on_menu_select(&mut self, _event: &mut Event<event::MenuSelect>) {}
 }
 
-pub trait RootComponent {
+pub trait RootComponent<A> {
     // Called when a root node is first instantiated, this method will only be called for root components. This is called after state is init()
-    fn root(&mut self, window: &dyn Any) {}
+    fn root(&mut self, window: &dyn Any, app_channel: Option<calloop::channel::Sender<A>>) {}
 }

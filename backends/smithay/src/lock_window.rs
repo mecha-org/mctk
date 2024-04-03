@@ -46,15 +46,17 @@ pub struct SessionLockWindowParams {
 }
 
 impl SessionLockWindow {
-    pub fn open_blocking<A>(
+    pub fn open_blocking<A, B>(
         params: SessionLockWindowParams,
+        app_channel: Option<Sender<B>>,
     ) -> (
         SessionLockSctkWindow,
         EventLoop<'static, SessionLockSctkWindow>,
         Sender<WindowMessage>,
     )
     where
-        A: 'static + RootComponent + Component + Default + Send + Sync,
+        A: 'static + RootComponent<B> + Component + Default + Send + Sync,
+        B: 'static,
     {
         let SessionLockWindowParams {
             window_opts,
@@ -71,17 +73,20 @@ impl SessionLockWindow {
             SessionLockSctkWindow::new(window_tx.clone(), window_opts, session_lock_rx)
                 .expect("failed to create application");
 
-        let mut ui: UI<SessionLockWindow, A> = UI::new(SessionLockWindow {
-            width: app_window.width,
-            height: app_window.height,
-            handle: None,
-            scale_factor: app_window.scale_factor,
-            window_tx: window_tx.clone(),
-            fonts,
-            assets,
-            svgs,
-            session_lock_tx,
-        });
+        let mut ui: UI<SessionLockWindow, A, B> = UI::new(
+            SessionLockWindow {
+                width: app_window.width,
+                height: app_window.height,
+                handle: None,
+                scale_factor: app_window.scale_factor,
+                window_tx: window_tx.clone(),
+                fonts,
+                assets,
+                svgs,
+                session_lock_tx,
+            },
+            app_channel,
+        );
 
         // insert handle
         let handle = event_loop.handle();

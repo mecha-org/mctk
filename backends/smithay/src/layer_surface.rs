@@ -197,7 +197,7 @@ impl LayerShellSctkWindow {
         });
     }
 
-    pub fn reconfigure(&mut self, width: u32, height: u32, layer_opts: LayerOptions) {
+    pub fn resize(&mut self, width: u32, height: u32, layer_opts: LayerOptions) {
         let layer = &mut self.layer;
 
         // set layer shell props
@@ -207,8 +207,6 @@ impl LayerShellSctkWindow {
         layer.set_exclusive_zone(layer_opts.zone);
 
         layer.commit();
-
-        let _ = &self.send_configure_event(width, height);
     }
 }
 

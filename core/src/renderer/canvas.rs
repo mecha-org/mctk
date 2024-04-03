@@ -15,6 +15,7 @@ use glutin::surface::{GlSurface, WindowSurface};
 use raw_window_handle::{RawDisplayHandle, RawWindowHandle};
 use std::collections::HashMap;
 use std::fmt;
+use std::num::NonZeroU32;
 use std::sync::{Arc, RwLock};
 
 fn load_assets(
@@ -138,6 +139,23 @@ impl super::Renderer for CanvasRenderer {
         self.scale_factor = scale_factor;
         self.context = canvas_context;
         self.assets = assets;
+    }
+
+    fn resize(&mut self, width: u32, height: u32) {
+        println!("renderer::resize {} {}", width, height);
+
+        let canvas = &mut self.context.gl_canvas;
+        let surface: &Surface<WindowSurface> = &mut self.context.gl_surface;
+
+        let gl_context = &mut self.context.gl_context;
+
+        surface.resize(
+            gl_context,
+            NonZeroU32::new(width).unwrap(),
+            NonZeroU32::new(height).unwrap(),
+        );
+
+        canvas.set_size(width, height, self.scale_factor);
     }
 
     fn render(&mut self, node: &Node, _physical_size: PixelSize) {
