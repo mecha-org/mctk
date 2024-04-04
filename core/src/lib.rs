@@ -16,6 +16,7 @@ pub mod reexports {
     pub use glutin;
     pub use resource;
     pub use cosmic_text;
+    pub use smithay_client_toolkit;
 }
 
 //
