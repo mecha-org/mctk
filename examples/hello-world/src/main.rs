@@ -2,18 +2,19 @@ use std::collections::HashMap;
 use std::time::Duration;
 // mod counter;
 use mctk_core::component::{Component, Message, RenderContext, RootComponent};
+use mctk_core::layout::Direction;
 use mctk_core::reexports::cosmic_text;
 use mctk_core::renderables::{types, Renderable};
 use mctk_core::style::Styled;
-use mctk_core::widgets::Button;
-use mctk_core::{lay, msg, size, txt, Color};
+use mctk_core::widgets::{self, Button, Div, TextBox};
+use mctk_core::{lay, msg, rect, size, txt, Color};
 use mctk_core::{node, node::Node};
 use mctk_macros::{component, state_component_impl};
 use mctk_smithay::layer_surface::LayerOptions;
 use mctk_smithay::layer_window::LayerWindowParams;
 use mctk_smithay::WindowOptions;
 use smithay_client_toolkit::shell::wlr_layer;
-use tracing_subscriber::EnvFilter;
+// use tracing_subscriber::EnvFilter;
 
 // App level channel
 pub enum AppMessage {}
@@ -26,7 +27,14 @@ pub struct AppState {
 
 #[derive(Debug, Clone)]
 enum HelloEvent {
-    ButtonPressed { name: String },
+    ButtonPressed {
+        name: String,
+    },
+    TextBox {
+        name: String,
+        value: String,
+        update_type: String,
+    },
 }
 
 #[component(State = "AppState")]
@@ -49,20 +57,49 @@ impl Component for App {
     fn view(&self) -> Option<Node> {
         let btn_pressed = self.state_ref().btn_pressed;
 
-        Some(node!(
-            Button::new(txt!("A!"))
-                .on_click(Box::new(|| msg!(HelloEvent::ButtonPressed {
-                    name: "Clicked".to_string()
-                })))
-                .on_double_click(Box::new(|| msg!(HelloEvent::ButtonPressed {
-                    name: "Double clicked".to_string()
-                })))
-                .style("color", Color::rgb(255., 0., 0.))
-                .style("background_color", Color::rgb(255., 255., 255.))
-                .style("active_color", Color::rgb(200., 200., 200.))
-                .style("font_size", 24.0),
-            lay!(size: size!(180.0, 180.0)),
-        ))
+        Some(
+            node!(
+                Div::new(),
+                lay![
+                    size: [480, 480],
+                    direction: Direction::Column
+                ]
+            )
+            .push(node!(
+                Button::new(txt!("A!"))
+                    .on_click(Box::new(|| msg!(HelloEvent::ButtonPressed {
+                        name: "Clicked".to_string()
+                    })))
+                    .on_double_click(Box::new(|| msg!(HelloEvent::ButtonPressed {
+                        name: "Double clicked".to_string()
+                    })))
+                    .style("color", Color::rgb(255., 0., 0.))
+                    .style("background_color", Color::rgb(255., 255., 255.))
+                    .style("active_color", Color::rgb(200., 200., 200.))
+                    .style("font_size", 24.0),
+                lay![size: size!(180.0, 180.0), margin: [0., 0., 20., 0.]]
+            ))
+            .push(node!(
+                TextBox::new(Some("".to_string()))
+                    .style("background_color", Color::WHITE)
+                    .style("font_size", 16.)
+                    .style("text_color", Color::BLACK)
+                    .style("border_width", 0.)
+                    .style("cursor_color", Color::BLACK)
+                    .style("placeholder_color", Color::MID_GREY)
+                    .placeholder("Type here")
+                    .on_change(Box::new(|s| msg!(HelloEvent::TextBox {
+                        name: "textbox".to_string(),
+                        value: s.to_string(),
+                        update_type: "change".to_string(),
+                    })))
+                    .on_commit(Box::new(|s| msg!(HelloEvent::TextBox {
+                        name: "textbox".to_string(),
+                        value: s.to_string(),
+                        update_type: "commit".to_string(),
+                    }))),
+                [size: [300, 30]])),
+        )
     }
 
     fn update(&mut self, message: Message) -> Vec<Message> {
@@ -81,15 +118,20 @@ impl Component for App {
 // Layer Surface App
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("debug"));
-    tracing_subscriber::fmt()
-        .compact()
-        .with_env_filter(env_filter)
-        .init();
+    // let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("debug"));
+    // tracing_subscriber::fmt()
+    //     .compact()
+    //     .with_env_filter(env_filter)
+    //     .init();
 
     // let mut fonts: Vec<String> = Vec::new();
     let assets: HashMap<String, String> = HashMap::new();
-    let svgs: HashMap<String, String> = HashMap::new();
+    let mut svgs: HashMap<String, String> = HashMap::new();
+
+    svgs.insert(
+        "eye_icon".to_string(),
+        "./src/assets/icons/eye.svg".to_string(),
+    );
 
     let mut fonts = cosmic_text::fontdb::Database::new();
     fonts.load_system_fonts();

@@ -193,6 +193,9 @@ impl LayerWindow {
                                             ui.handle_input(&Input::Press(Button::Keyboard(
                                                 keysym_to_key(key),
                                             )));
+                                            ui.handle_input(&Input::Text(
+                                                keysym_to_key(key).to_string(),
+                                            ));
                                         }
                                         KeyboardEvent::KeyReleased { key } => {
                                             ui.handle_input(&Input::Release(Button::Keyboard(

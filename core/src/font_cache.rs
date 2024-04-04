@@ -1,8 +1,8 @@
+use cosmic_text::fontdb::Database;
+use cosmic_text::{Buffer, FontSystem, LayoutGlyph, Metrics};
+use femtovg::Align;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
-use cosmic_text::{Buffer, FontSystem, Metrics};
-use cosmic_text::fontdb::Database;
-use femtovg::Align;
 
 use crate::renderables::text::{self, InstanceBuilder};
 use crate::renderer::text::TextRenderer;
@@ -11,7 +11,7 @@ use crate::{Pos, Scale};
 
 /// Value by which fonts are scaled. 12 px fonts render at scale 18 px for some reason. Useful if you need to compute the line height: it will be `<font_size> * SIZE_SCALE` in logical size, and `<font_size> * SIZE_SCALE * <scale_factor>` in physical pixels.
 pub const SIZE_SCALE: f32 = 1.5;
-pub const DEFAULT_FONT_SIZE: f32= 12.;
+pub const DEFAULT_FONT_SIZE: f32 = 12.;
 pub const DEFAULT_LINE_HEIGHT: f32 = 16.;
 pub const GLYPH_PADDING: u32 = 0;
 pub const GLYPH_MARGIN: u32 = 0;
@@ -24,10 +24,8 @@ pub struct FontCache {
 impl FontCache {
     pub fn new(fonts: Database) -> Self {
         let text_renderer = TextRenderer::new(fonts);
-        
-        Self {
-            text_renderer,
-        }
+
+        Self { text_renderer }
     }
 
     pub fn measure_text(
@@ -39,7 +37,7 @@ impl FontCache {
         line_height: f32,
         h_alignment: HorizontalPosition,
         bounds: (f32, f32),
-    ) -> (Option<f32>, Option<f32>) {
+    ) -> (Option<f32>, Option<f32>, Vec<LayoutGlyph>) {
         let font_size = size * scale_factor;
         let text_renderer = &mut self.text_renderer;
 
@@ -49,7 +47,11 @@ impl FontCache {
                 HorizontalPosition::Center => Align::Center,
                 HorizontalPosition::Right => Align::Right,
             })
-            .pos(Pos { x: 0., y: 0., z: 0. })
+            .pos(Pos {
+                x: 0.,
+                y: 0.,
+                z: 0.,
+            })
             .scale(Scale {
                 width: bounds.0,
                 height: bounds.1,

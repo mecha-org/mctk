@@ -6,6 +6,7 @@ use crate::renderables::text::InstanceBuilder;
 use crate::renderables::{text, Renderable};
 use crate::style::{FontWeight, HorizontalPosition, Styled};
 use crate::types::*;
+use cosmic_text::LayoutGlyph;
 use femtovg::Align;
 use mctk_macros::{component, state_component_impl};
 
@@ -78,19 +79,19 @@ impl Component for Text {
             && c.max_width == max_width
             && c.max_height == max_height
         {
-            return c.output.unwrap();
+            let output = c.output.unwrap();
+            (output.0, output.1);
         }
 
         let text = self.text.get(0).unwrap().text.clone();
         let size: f32 = self.style_val("size").unwrap().f32();
         let font = self.style_val("font").map(|p| p.str().to_string());
         let mut line_height = size * 1.3; // line height as 1.3 of font_size
-                if self.style_val("line_height").is_some() {
+        if self.style_val("line_height").is_some() {
             line_height = self.style_val("line_height").unwrap().f32();
         }
 
-
-        let output = font_cache.measure_text(
+        let (t_w, t_h, ..) = font_cache.measure_text(
             text.clone(),
             font,
             size,
@@ -103,6 +104,7 @@ impl Component for Text {
             ),
         );
 
+        let output = (t_w, t_h);
         self.state_mut().bounds_cache = BoundsCache {
             width,
             height,
