@@ -102,111 +102,47 @@ impl Component for Slider {
             rect_instance_data,
         )));
 
-        //Horizontal Line
+        let start = Pos {
+            x: pos.x,
+            y: pos.y + height / 2.,
+            z: 0.,
+        };
+
+        let end = Pos {
+            x: pos.x + width,
+            y: pos.y + height / 2.,
+            z: 0.,
+        };
+
+        //Horizontal BG
         let line_instance_data = LineInstanceBuilder::default()
-            .from(Pos {
-                x: pos.x,
-                y: pos.y + height / 2.,
-                z: 0.,
-            })
-            .to(Pos {
-                x: pos.x + width,
-                y: pos.y + height / 2.,
-                z: 0.,
-            })
-            .color(Color::rgb(50., 131., 232.))
-            .width(3.0)
+            .from(start)
+            .to(end)
+            .color(Color::rgb(64., 64., 68.))
+            .width(4.0)
             .build()
             .unwrap();
         rs.push(Renderable::Line(Line::from_instance_data(
             line_instance_data,
         )));
 
-        //Vertical Line
-        let vertial_lines_points = vec![
-            (
-                0.10,
-                Pos {
-                    x: pos.x + 0.10 * width,
-                    y: pos.y + height / 2. - 5.,
-                    z: 0.,
-                },
-                Pos {
-                    x: pos.x + 0.10 * width,
-                    y: pos.y + height / 2. + 5.,
-                    z: 0.,
-                },
-            ),
-            (
-                0.30,
-                Pos {
-                    x: pos.x + 0.30 * width,
-                    y: pos.y + height / 2. - 5.,
-                    z: 0.,
-                },
-                Pos {
-                    x: pos.x + 0.30 * width,
-                    y: pos.y + height / 2. + 5.,
-                    z: 0.,
-                },
-            ),
-            (
-                0.50,
-                Pos {
-                    x: pos.x + 0.50 * width,
-                    y: pos.y + height / 2. - 5.,
-                    z: 0.,
-                },
-                Pos {
-                    x: pos.x + 0.50 * width,
-                    y: pos.y + height / 2. + 5.,
-                    z: 0.,
-                },
-            ),
-            (
-                0.70,
-                Pos {
-                    x: pos.x + 0.70 * width,
-                    y: pos.y + height / 2. - 5.,
-                    z: 0.,
-                },
-                Pos {
-                    x: pos.x + 0.70 * width,
-                    y: pos.y + height / 2. + 5.,
-                    z: 0.,
-                },
-            ),
-            (
-                0.90,
-                Pos {
-                    x: pos.x + 0.90 * width,
-                    y: pos.y + height / 2. - 5.,
-                    z: 0.,
-                },
-                Pos {
-                    x: pos.x + 0.90 * width,
-                    y: pos.y + height / 2. + 5.,
-                    z: 0.,
-                },
-            ),
-        ];
+        let filled_end = Pos {
+            x: pos.x + width * self.value as f32 / 100.,
+            y: pos.y + height / 2.,
+            z: 0.,
+        };
 
-        for (per, from, to) in vertial_lines_points {
-            let line_instance_data = LineInstanceBuilder::default()
-                .from(from)
-                .to(to)
-                .color(if per * 100. <= self.value as f32 {
-                    Color::rgb(50., 131., 232.)
-                } else {
-                    Color::rgb(32., 36., 49.)
-                })
-                .width(3.0)
-                .build()
-                .unwrap();
-            rs.push(Renderable::Line(Line::from_instance_data(
-                line_instance_data,
-            )));
-        }
+        //Horizontal Line
+        let line_instance_data = LineInstanceBuilder::default()
+            .from(start)
+            .to(filled_end)
+            .color(Color::WHITE)
+            .width(4.0)
+            .build()
+            .unwrap();
+        rs.push(Renderable::Line(Line::from_instance_data(
+            line_instance_data,
+        )));
 
         //Circle
         // let radius = 10.;
@@ -264,7 +200,7 @@ impl Component for Pointer {
         let AABB { pos, .. } = context.aabb;
         let mut rs = vec![];
 
-        let radius = 12.;
+        let radius = 9.;
         let circle_instance_data = CircleInstanceBuilder::default()
             .origin(Pos {
                 x: pos.x + radius / 2. + self.value as f32 * width / 100.,
