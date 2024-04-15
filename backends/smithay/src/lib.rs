@@ -73,3 +73,7 @@ pub fn new_raw_wayland_handle(wl_display: &WlDisplay, wl_surface: &WlSurface) ->
     };
     wayland_handle
 }
+
+mod reexports {
+    pub use smithay_client_toolkit::reexports::calloop::channel::Sender;
+}

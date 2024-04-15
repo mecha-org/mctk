@@ -2,6 +2,8 @@
 //!
 //! These are most typically interacted with through event-handling methods of [`Component`][crate::Component]. For instance [`#on_click`][crate::Component#method.on_click] receives an `Event<Click>`. A [`Click`][crate::event::Click], holds a [`MouseButton`] input type. If the user cares what kind of click they are reacting to, they need to match this input to the desired mouse button.
 
+use std::fmt;
+
 use crate::types::Data;
 
 /// Mouse movement or scrolling
@@ -225,6 +227,13 @@ pub enum Key {
     RAlt,
     RMeta,
 }
+impl fmt::Display for Key {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+        // or, alternatively:
+        // fmt::Debug::fmt(self, f)
+    }
+}
 
 /// Mouse buttons
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -249,9 +258,8 @@ pub enum TouchAction {
     Up { x: f32, y: f32 },
     Down { x: f32, y: f32 },
     Cancel { x: f32, y: f32 },
-    Moved { x: f32, y: f32 }
+    Moved { x: f32, y: f32 },
 }
-
 
 /// Drag and drop inputs
 #[derive(Clone, Debug, PartialEq)]

@@ -298,6 +298,10 @@ impl Default for Style {
                 Color::BLACK.into(),
             ),
             (
+                StyleKey::new("TextBox", "placeholder_color", None),
+                Color::BLACK.into(),
+            ),
+            (
                 StyleKey::new("TextBox", "background_color", None),
                 Color::WHITE.into(),
             ),
@@ -315,9 +319,16 @@ impl Default for Style {
             ),
             (StyleKey::new("TextBox", "border_width", None), 1.0.into()),
             (StyleKey::new("TextBox", "padding", None), 1.0.into()),
+            (
+                StyleKey::new("TextBox", "font_weight", None),
+                FontWeight::Normal.into(),
+            ),
             // Text
             (StyleKey::new("Text", "size", None), 12.0.into()),
-            (StyleKey::new("Text", "font_weight", None), FontWeight::Normal.into()),
+            (
+                StyleKey::new("Text", "font_weight", None),
+                FontWeight::Normal.into(),
+            ),
             (StyleKey::new("Text", "color", None), Color::BLACK.into()),
             (
                 StyleKey::new("Text", "h_alignment", None),

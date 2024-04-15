@@ -1,15 +1,24 @@
 use std::cmp::Ordering;
+use std::default;
 use std::hash::Hash;
+use std::ops::Add;
 use std::time::Instant;
 
 use crate::component::{Component, ComponentHasher, Message, RenderContext};
 use crate::font_cache::{FontCache, TextSegment};
 use crate::input::Key;
-use crate::layout::ScrollPosition;
+use crate::layout::{Alignment, ScrollPosition};
+use crate::renderables::{
+    rect::InstanceBuilder as RectInstanceBuilder, text::InstanceBuilder as TextInstanceBuilder,
+};
 use crate::renderables::{Rect, Renderable, Text};
 use crate::style::{HorizontalPosition, Styled};
-use crate::{event, lay, node, size_pct, types::*, Node};
+use crate::{event, lay, msg, node, rect, size, size_pct, types::*, Node};
+use cosmic_text::LayoutGlyph;
+use femtovg::Align;
 use mctk_macros::{component, state_component_impl};
+
+use super::IconButton;
 
 const CURSOR_BLINK_PERIOD: u128 = 500; // millis
 
@@ -19,6 +28,7 @@ enum TextBoxMessage {
     Close,
     Change(String),
     Commit(String),
+    ToggleHidden,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -28,14 +38,27 @@ pub enum TextBoxAction {
     Paste,
 }
 
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum TextBoxVariant {
+    #[default]
+    Normal,
+    Hidden,
+}
+
 #[derive(Debug, Default)]
 struct TextBoxState {
     focused: bool,
+    hidden: bool,
+    has_text_value: bool,
 }
 
 #[component(State = "TextBoxState", Styled, Internal)]
 pub struct TextBox {
     text: Option<String>,
+    placeholder: Option<String>,
+    variant: Option<TextBoxVariant>,
+    show_icon: Option<String>,
+    hide_icon: Option<String>,
     on_change: Option<Box<dyn Fn(&str) -> Message + Send + Sync>>,
     on_commit: Option<Box<dyn Fn(&str) -> Message + Send + Sync>>,
     on_focus: Option<Box<dyn Fn() -> Message + Send + Sync>>,
@@ -51,9 +74,13 @@ impl TextBox {
     pub fn new(default: Option<String>) -> Self {
         Self {
             text: default,
+            placeholder: None,
+            variant: None,
             on_change: None,
             on_commit: None,
             on_focus: None,
+            show_icon: None,
+            hide_icon: None,
             state: Some(TextBoxState::default()),
             dirty: false,
             class: Default::default(),
@@ -75,6 +102,24 @@ impl TextBox {
         self.on_focus = Some(focus_fn);
         self
     }
+
+    pub fn placeholder<S: Into<String>>(mut self, placeholder: S) -> Self {
+        self.placeholder = Some(placeholder.into());
+        self
+    }
+    pub fn variant(mut self, variant: TextBoxVariant) -> Self {
+        self.state_mut().hidden = variant == TextBoxVariant::Hidden;
+        self.variant = Some(variant);
+        self
+    }
+    pub fn show_icon<S: Into<String>>(mut self, icon: S) -> Self {
+        self.show_icon = Some(icon.into());
+        self
+    }
+    pub fn hide_icon<S: Into<String>>(mut self, icon: S) -> Self {
+        self.hide_icon = Some(icon.into());
+        self
+    }
 }
 
 #[state_component_impl(TextBoxState)]
@@ -84,26 +129,52 @@ impl Component for TextBox {
         let border_color: Color = self.style_val("border_color").into();
         let border_width: f32 = self.style_val("border_width").unwrap().f32();
 
-        Some(
-            node!(
-                TextBoxContainer::new(
-                    background_color,
-                    border_color,
-                    border_width * if self.state_ref().focused { 2.0 } else { 1.0 },
-                ),
-                lay!(size: size_pct!(100.0),)
-            )
-            .push(node!(
-                TextBoxText {
-                    default_text: self.text.clone().unwrap_or_default(),
-                    style_overrides: self.style_overrides.clone(),
-                    class: self.class,
-                    state: None,
-                    dirty: false,
-                },
-                lay!(size: size_pct!(100.0),)
-            )),
+        let mut textbox_node = node!(
+            TextBoxContainer::new(
+                background_color,
+                border_color,
+                border_width * if self.state_ref().focused { 2.0 } else { 1.0 },
+            ),
+            lay![
+                size: size_pct!(100.0),
+                cross_alignment: crate::layout::Alignment::Center
+            ]
         )
+        .push(node!(
+            TextBoxText {
+                placeholder: self.placeholder.clone(),
+                default_text: self.text.clone().unwrap_or_default(),
+                variant: self.variant.clone().unwrap_or_default(),
+                hidden: self.state_ref().hidden,
+                style_overrides: self.style_overrides.clone(),
+                class: self.class,
+                state: None,
+                dirty: false,
+            },
+            lay![size_pct: [90.0],]
+        ));
+
+        if self.variant == Some(TextBoxVariant::Hidden) && self.state_ref().has_text_value {
+            if let (Some(show), Some(hide)) = (self.show_icon.clone(), self.hide_icon.clone()) {
+                textbox_node = textbox_node.push(node!(
+                    IconButton::new(if self.state_ref().hidden { hide } else { show })
+                        .on_click(Box::new(|| msg!(TextBoxMessage::ToggleHidden)))
+                        .style("background_color", Color::TRANSPARENT)
+                        .style("active_color", Color::TRANSPARENT)
+                        .style("padding", 2.)
+                        .style("radius", 0.),
+                    lay![
+                        size: [36, 32],
+                        position_type: Absolute,
+                        position: [6.0, Auto, 0.0, 0.0],
+                        cross_alignment: Alignment::Center,
+                        // padding: [9, 18, 9, 18]
+                    ],
+                ));
+            }
+        }
+
+        Some(textbox_node)
     }
 
     fn update(&mut self, message: Message) -> Vec<Message> {
@@ -117,6 +188,7 @@ impl Component for TextBox {
             }
             Some(TextBoxMessage::Close) => self.state_mut().focused = false,
             Some(TextBoxMessage::Change(s)) => {
+                self.state_mut().has_text_value = !s.is_empty();
                 if let Some(change_fn) = &self.on_change {
                     m.push(change_fn(s))
                 }
@@ -125,6 +197,9 @@ impl Component for TextBox {
                 if let Some(commit_fn) = &self.on_commit {
                     m.push(commit_fn(s))
                 }
+            }
+            Some(TextBoxMessage::ToggleHidden) => {
+                self.state_mut().hidden = !self.state_ref().hidden;
             }
             _ => m.push(message),
         }
@@ -224,23 +299,22 @@ impl Component for TextBoxContainer {
         let border_width = self.border_width_px(context.scale_factor);
         self.state_mut().border_width_px = border_width;
 
-        let background = Renderable::Rect(Rect::new(
-            Pos {
-                x: border_width,
-                y: border_width,
-                z: 0.5,
-            },
-            context.aabb.size() - Scale::new(border_width * 2.0, border_width * 2.0),
-            self.background_color,
+        let background = Renderable::Rect(Rect::from_instance_data(
+            RectInstanceBuilder::default()
+                .pos(context.aabb.pos.add(Pos {
+                    x: border_width,
+                    y: border_width,
+                    z: 0.5,
+                }))
+                .scale(context.aabb.size() - Scale::new(border_width * 2.0, border_width * 2.0))
+                .border_size(border_width)
+                .border_color(self.border_color)
+                .color(self.background_color)
+                .build()
+                .unwrap(),
         ));
 
-        let border = Renderable::Rect(Rect::new(
-            Pos::default(),
-            context.aabb.size(),
-            self.border_color,
-        ));
-
-        Some(vec![background, border])
+        Some(vec![background])
     }
 }
 
@@ -253,7 +327,7 @@ struct TextBoxTextState {
     selection_from: Option<usize>,
     activated_at: Instant,
     cursor_visible: bool,
-    glyphs: Vec<crate::font_cache::SectionGlyph>,
+    glyphs: Vec<LayoutGlyph>,
     glyph_widths: Vec<f32>,
     padding_offset_px: f32,
     dirty: bool,
@@ -264,20 +338,25 @@ struct TextBoxTextState {
 struct TextBoxTextState {
     focused: bool,
     text: String,
+    masked_text: String,
     cursor_pos: usize,
     selection_from: Option<usize>,
     activated_at: Instant,
     cursor_visible: bool,
-    glyphs: Vec<crate::font_cache::SectionGlyph>,
+    glyphs: Vec<LayoutGlyph>,
     glyph_widths: Vec<f32>,
     padding_offset_px: f32,
     dirty: bool,
+    variant: TextBoxVariant,
 }
 
 #[component(State = "TextBoxTextState", Styled = "TextBox", Internal)]
 #[derive(Debug)]
 pub struct TextBoxText {
     pub default_text: String,
+    pub placeholder: Option<String>,
+    pub variant: TextBoxVariant,
+    pub hidden: bool,
 }
 
 impl TextBoxText {
@@ -285,6 +364,7 @@ impl TextBoxText {
         self.state = Some(TextBoxTextState {
             focused: false,
             text: self.default_text.clone(),
+            masked_text: get_masked_text(self.default_text.clone()),
             cursor_pos: 0,
             selection_from: None,
             activated_at: Instant::now(),
@@ -293,6 +373,7 @@ impl TextBoxText {
             glyph_widths: vec![],
             padding_offset_px: 0.0,
             dirty: true,
+            variant: self.variant.clone(),
             #[cfg(feature = "backend_wx_rs")]
             menu: None,
         });
@@ -310,11 +391,7 @@ impl TextBoxText {
     }
 
     fn position(&self, x: f32) -> usize {
-        if let Some(i) = self
-            .state_ref()
-            .glyphs
-            .iter()
-            .position(|g| x < g.glyph.position.x + 4.0)
+        if let Some(i) = self.state_ref().glyphs.iter().position(|g| x < g.x + 4.0)
         // This should really be checking against the glyph center
         {
             i
@@ -358,6 +435,7 @@ impl TextBoxText {
         } else {
             let pos = self.state_ref().cursor_pos;
             self.state_mut().text.insert_str(pos, text);
+            self.state_mut().masked_text = get_masked_text(self.state_ref().text.clone());
             self.state_mut().cursor_pos += text.len();
         }
         self.state_mut().dirty = true;
@@ -373,49 +451,52 @@ impl TextBoxText {
         let len = self.state_ref().text.len();
         let glyphs = &self.state_ref().glyphs;
         (if pos < len {
-            let g = &glyphs[pos].glyph;
-            g.position.x
+            let g = &glyphs[pos];
+            g.x
         } else if pos == 0 {
             0.0
         } else {
             // Last glyph, need to add the advance
-            let g = &glyphs[pos - 1].glyph;
-            g.position.x + self.state_ref().glyph_widths.last().map_or(0.0, |w| *w)
+            let g = &glyphs[pos - 1];
+            g.x + self.state_ref().glyph_widths.last().map_or(0.0, |w| *w)
         }) + self.state_ref().padding_offset_px
     }
 
     fn cut(&mut self) -> bool {
-        if let Some((a, b)) = self.selection() {
-            if let Some(w) = crate::current_window() {
-                w.put_on_clipboard(&self.state_ref().text[a..b].into())
-            }
-            self.insert_text("");
-            true
-        } else {
-            false
-        }
+        // if let Some((a, b)) = self.selection() {
+        //     if let Some(w) = crate::current_window() {
+        //         w.put_on_clipboard(&self.state_ref().text[a..b].into())
+        //     }
+        //     self.insert_text("");
+        //     true
+        // } else {
+        //     false
+        // }
+        false
     }
 
     fn copy(&mut self) -> bool {
-        if let Some((a, b)) = self.selection() {
-            if let Some(w) = crate::current_window() {
-                w.put_on_clipboard(&self.state_ref().text[a..b].into())
-            }
-            true
-        } else {
-            false
-        }
+        // if let Some((a, b)) = self.selection() {
+        //     if let Some(w) = crate::current_window() {
+        //         w.put_on_clipboard(&self.state_ref().text[a..b].into())
+        //     }
+        //     true
+        // } else {
+        //     false
+        // }
+        false
     }
 
     fn paste(&mut self) -> bool {
-        if let Some(crate::Data::String(text)) =
-            crate::current_window().and_then(|w| w.get_from_clipboard())
-        {
-            self.insert_text(&text);
-            true
-        } else {
-            false
-        }
+        // if let Some(crate::Data::String(text)) =
+        //     crate::current_window().and_then(|w| w.get_from_clipboard())
+        // {
+        //     self.insert_text(&text);
+        //     true
+        // } else {
+        //     false
+        // }
+        true
     }
 
     fn handle_action(&mut self, action: TextBoxAction) -> Vec<Message> {
@@ -467,15 +548,15 @@ impl Component for TextBoxText {
     }
 
     fn on_mouse_enter(&mut self, _event: &mut event::Event<event::MouseEnter>) {
-        if let Some(w) = crate::current_window() {
-            w.set_cursor("Ibeam")
-        }
+        // if let Some(w) = crate::current_window() {
+        //     w.set_cursor("Ibeam")
+        // }
     }
 
     fn on_mouse_leave(&mut self, _event: &mut event::Event<event::MouseLeave>) {
-        if let Some(w) = crate::current_window() {
-            w.unset_cursor()
-        }
+        // if let Some(w) = crate::current_window() {
+        //     w.unset_cursor()
+        // }
     }
 
     fn on_tick(&mut self, _event: &mut event::Event<event::Tick>) {
@@ -703,13 +784,16 @@ impl Component for TextBoxText {
     fn render_hash(&self, hasher: &mut ComponentHasher) {
         (self.style_val("font_size").unwrap().f32() as u32).hash(hasher);
         (self.style_val("text_color").unwrap().color()).hash(hasher);
+        (self.style_val("placeholder_color").unwrap().color()).hash(hasher);
         (self.style_val("padding").unwrap().f32() as u32).hash(hasher);
         (self.style_val("font").map(|p| p.str().to_string())).hash(hasher);
         self.state_ref().focused.hash(hasher);
         self.state_ref().selection_from.hash(hasher);
         self.state_ref().text.hash(hasher);
+        self.state_ref().masked_text.hash(hasher);
         self.state_ref().cursor_pos.hash(hasher);
         self.state_ref().cursor_visible.hash(hasher);
+        self.state_ref().variant.hash(hasher);
     }
 
     fn focus(&self) -> Option<Point> {
@@ -725,59 +809,69 @@ impl Component for TextBoxText {
         _height: Option<f32>,
         _max_width: Option<f32>,
         _max_height: Option<f32>,
-        font_cache: &FontCache,
+        font_cache: &mut FontCache,
         scale_factor: f32,
     ) -> (Option<f32>, Option<f32>) {
         let padding: f32 = self.style_val("padding").unwrap().f32();
         let font_size: f32 = self.style_val("font_size").unwrap().f32();
         let border_width: f32 = self.style_val("border_width").unwrap().f32();
+        let font = self.style_val("font").map(|p| p.str().to_string());
+        let is_placeholder = self.state_ref().text.len() == 0 && self.placeholder.is_some();
+        let text = if is_placeholder {
+            self.placeholder.clone().unwrap()
+        } else {
+            if self.state_ref().variant == TextBoxVariant::Hidden && self.hidden {
+                get_masked_text(self.state_ref().text.clone())
+            } else {
+                self.state_ref().text.clone()
+            }
+        };
+        let (t_w, t_h, glyphs) = font_cache.measure_text(
+            text,
+            font.clone(),
+            font_size.into(),
+            scale_factor,
+            font_size * 1.3,
+            HorizontalPosition::Left,
+            (f32::MAX, f32::MAX),
+        );
 
-        if self.state_ref().dirty {
-            let font = self.style_val("font").map(|p| p.str().to_string());
+        //Temporary removed this check due to cursor not getting correct position in variant hidden - Akshay
+        //self.state_ref().dirty &&
 
-            self.state_mut().glyphs = font_cache.layout_text(
-                &[TextSegment {
-                    text: self.state_ref().text.clone(),
-                    size: font_size.into(),
-                    font: font.clone(),
-                }],
-                font.as_deref(),
-                font_size,
-                scale_factor,
-                HorizontalPosition::Left,
-                (f32::MAX, f32::MAX),
-            );
-
-            let glyph_widths = font_cache.glyph_widths(
-                font.as_deref(),
-                font_size,
-                scale_factor,
-                &self.state_ref().glyphs,
-            );
+        if !is_placeholder {
+            let glyph_widths = glyphs.iter().map(|g| g.w).collect();
+            // println!("glyph_widths are {:?}", glyph_widths);
             self.state_mut().glyph_widths = glyph_widths;
+            self.state_mut().glyphs = glyphs;
             self.state_mut().padding_offset_px = ((padding + border_width) * scale_factor).round();
-
             self.state_mut().dirty = false;
         }
 
-        let width = self
-            .state_ref()
-            .glyphs
-            .last()
-            .map_or(0.0, |g| g.glyph.position.x + g.glyph.scale.x)
-            + self.state_ref().padding_offset_px * 2.0;
+        let width = if is_placeholder {
+            t_w.unwrap()
+        } else {
+            self.state_ref().glyphs.last().map_or(0.0, |g| g.x + g.w)
+        } + self.state_ref().padding_offset_px * 2.0;
         (
             Some(width / scale_factor),
-            Some(font_size * crate::font_cache::SIZE_SCALE + padding * 2.0 + border_width * 2.0),
+            Some(t_h.unwrap_or_default() + padding * 2.0 + border_width * 2.0),
         )
     }
 
     fn render(&mut self, context: RenderContext) -> Option<Vec<Renderable>> {
         let cursor_z = 2.0;
         let text_z = 5.0;
-        let font_size: f32 =
-            self.style_val("font_size").unwrap().f32() * crate::font_cache::SIZE_SCALE;
-        let text_color: Color = self.style_val("text_color").into();
+        let font = self.style_val("font").map(|p| p.str().to_string());
+        let font_size: f32 = self.style_val("font_size").unwrap().f32();
+        let font_weight = self.style_val("font_weight").unwrap().font_weight();
+        let mut line_height = font_size * 1.3; // line height as 1.3 of font_size
+
+        if self.style_val("line_height").is_some() {
+            line_height = self.style_val("line_height").unwrap().f32();
+        }
+        // println!("line_height {:?}", line_height);
+
         let cursor_color: Color = self.style_val("cursor_color").into();
         let selection_color: Color = self.style_val("selection_color").into();
         let pos = self.state_ref().cursor_pos;
@@ -789,49 +883,92 @@ impl Component for TextBoxText {
             .selection_from
             .map(|pos| self.cursor_position_px(pos));
 
+        let is_placeholder = self.state_ref().text.len() == 0 && self.placeholder.is_some();
+        let text_color: Color = self.style_val("text_color").into();
+        // println!("self.state_ref().hidden {:?}", self.hidden);
+        let text = if self.state_ref().variant == TextBoxVariant::Hidden && self.hidden {
+            self.state_ref().masked_text.clone()
+        } else {
+            self.state_ref().text.clone()
+        };
+
         let mut renderables = vec![];
 
-        if !self.state_ref().glyphs.is_empty() {
-            let text = Renderable::Text(Text::new(
-                self.state_ref().glyphs.clone(),
-                Pos {
+        if !self.state_ref().glyphs.is_empty() && !is_placeholder {
+            let text_instance = TextInstanceBuilder::default()
+                .pos(context.aabb.pos.add(Pos {
                     x: offset,
-                    y: offset,
-                    z: text_z,
-                },
-                text_color,
-                &mut context.caches.text_buffer.write().unwrap(),
-                context.prev_state.and_then(|v| match v.get(0) {
-                    Some(Renderable::Text(r)) => Some(r.buffer_id),
-                    _ => None,
-                }),
-            ));
+                    y: offset * 2.0,
+                    z: 0.,
+                }))
+                .scale(context.aabb.size())
+                .text(text)
+                .color(text_color)
+                .font(font.clone())
+                .weight(font_weight)
+                .line_height(line_height)
+                .font_size(font_size)
+                .build()
+                .unwrap();
+
+            let text = Renderable::Text(Text::from_instance_data(text_instance));
+
+            renderables.push(text);
+        }
+        let placeholder_color: Color = self.style_val("placeholder_color").into();
+        if is_placeholder {
+            let text_instance = TextInstanceBuilder::default()
+                .pos(context.aabb.pos.add(Pos {
+                    x: offset,
+                    y: offset * 2.0,
+                    z: 0.,
+                }))
+                .scale(context.aabb.size())
+                .text(self.placeholder.clone().unwrap())
+                .color(placeholder_color)
+                .font(font.clone())
+                .weight(font_weight)
+                .line_height(line_height)
+                .font_size(font_size)
+                .build()
+                .unwrap();
+
+            let text = Renderable::Text(Text::from_instance_data(text_instance));
 
             renderables.push(text);
         }
 
         if self.state_ref().cursor_visible && self.selection().is_none() {
             let cursor_rect = Renderable::Rect(Rect::new(
-                Pos::new(cursor_x, offset + 2.0, cursor_z),
+                context
+                    .aabb
+                    .pos
+                    .add(Pos::new(cursor_x, offset + 6.0, cursor_z)),
                 Scale::new(1.0, font_size_px - offset),
                 cursor_color,
             ));
             renderables.push(cursor_rect);
-        } else if self.selection().is_some() {
-            let (x1, x2) = if cursor_x > selection_from_x.unwrap() {
-                (selection_from_x.unwrap(), cursor_x)
-            } else {
-                (cursor_x, selection_from_x.unwrap())
-            };
-
-            let selection_rect = Renderable::Rect(Rect::new(
-                Pos::new(x1, offset + 2.0, cursor_z),
-                Scale::new(x2 - x1, font_size_px - offset),
-                selection_color,
-            ));
-            renderables.push(selection_rect);
         }
+
+        // else if self.selection().is_some() {
+        //     let (x1, x2) = if cursor_x > selection_from_x.unwrap() {
+        //         (selection_from_x.unwrap(), cursor_x)
+        //     } else {
+        //         (cursor_x, selection_from_x.unwrap())
+        //     };
+
+        //     let selection_rect = Renderable::Rect(Rect::new(
+        //         Pos::new(x1, offset + 2.0, cursor_z),
+        //         Scale::new(x2 - x1, font_size_px - offset),
+        //         selection_color,
+        //     ));
+        //     renderables.push(selection_rect);
+        // }
 
         Some(renderables)
     }
+}
+
+fn get_masked_text<S: Into<String>>(text: S) -> String {
+    text.into().chars().into_iter().map(|_| "•").collect()
 }

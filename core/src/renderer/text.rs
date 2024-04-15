@@ -1,9 +1,14 @@
 use std::collections::HashMap;
 
 use cosmic_text::fontdb::Database;
-use cosmic_text::{ Attrs, AttrsList, Align as CosmicAlign, Buffer, CacheKey, Color as FontColor, Family, FontSystem, Metrics, Shaping, Stretch, Style, SubpixelBin, Weight, Wrap };
+use cosmic_text::{
+    Align as CosmicAlign, Attrs, AttrsList, Buffer, CacheKey, Color as FontColor, Family,
+    FontSystem, LayoutGlyph, Metrics, Shaping, Stretch, Style, SubpixelBin, Weight, Wrap,
+};
 use femtovg::renderer::OpenGl;
-use femtovg::{ Align, Atlas, Canvas, DrawCommand, ErrorKind, GlyphDrawCommands, ImageFlags, ImageId, ImageSource, Paint, Quad, Renderer
+use femtovg::{
+    Align, Atlas, Canvas, DrawCommand, ErrorKind, GlyphDrawCommands, ImageFlags, ImageId,
+    ImageSource, Paint, Quad, Renderer,
 };
 use imgref::{Img, ImgRef};
 use rgb::RGBA8;
@@ -11,7 +16,9 @@ use swash::scale::image::Content;
 use swash::scale::{Render, ScaleContext, Source, StrikeWith};
 use swash::zeno::{Format, Vector};
 
-use crate::font_cache::{DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT, GLYPH_MARGIN, GLYPH_PADDING, TEXTURE_SIZE};
+use crate::font_cache::{
+    DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT, GLYPH_MARGIN, GLYPH_PADDING, TEXTURE_SIZE,
+};
 use crate::renderables::text::Instance;
 use crate::{Pos, Scale};
 
@@ -31,7 +38,6 @@ pub struct FontTexture {
     atlas: Atlas,
     image_id: ImageId,
 }
-
 
 #[derive(Copy, Clone, Debug)]
 pub struct RenderedGlyph {
@@ -59,7 +65,7 @@ impl TextRenderer {
         let mut font_system = FontSystem::new_with_locale_and_db(locale, fonts);
         let fs = &mut font_system;
         let buffer = Buffer::new(fs, Metrics::new(DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT));
-        
+
         Self {
             font_system,
             buffer,
@@ -69,7 +75,11 @@ impl TextRenderer {
         }
     }
 
-    pub fn draw_text(&mut self, canvas: &mut Canvas<OpenGl>, instance: Instance) -> Result<Vec<(FontColor, GlyphDrawCommands)>, ErrorKind> {
+    pub fn draw_text(
+        &mut self,
+        canvas: &mut Canvas<OpenGl>,
+        instance: Instance,
+    ) -> Result<Vec<(FontColor, GlyphDrawCommands)>, ErrorKind> {
         let Instance {
             pos,
             scale,
@@ -91,9 +101,12 @@ impl TextRenderer {
             .weight(Weight(weight as u16))
             .stretch(Stretch::Normal)
             .style(Style::Normal)
-            .color(
-                FontColor::rgba(color.r as u8, color.g as u8, color.b as u8, (color.a * 255.) as u8),
-            );
+            .color(FontColor::rgba(
+                color.r as u8,
+                color.g as u8,
+                color.b as u8,
+                (color.a * 255.) as u8,
+            ));
 
         if font.is_some() {
             attrs = attrs.family(Family::Name(font.as_ref().unwrap()));
@@ -123,7 +136,10 @@ impl TextRenderer {
         self.fill_to_cmds(canvas, scale, pos, (0., 0.), config)
     }
 
-    pub fn measure_text(&mut self, instance: Instance) -> (Option<f32>, Option<f32>) {
+    pub fn measure_text(
+        &mut self,
+        instance: Instance,
+    ) -> (Option<f32>, Option<f32>, Vec<LayoutGlyph>) {
         let Instance {
             pos,
             scale,
@@ -171,8 +187,8 @@ impl TextRenderer {
             subpixel: true,
         };
 
-        let (w, h) = self.measure_glyphs(scale, pos, (0., 0.), config);
-        (Some(w), Some(h))
+        let (w, h, glyphs) = self.measure_glyphs(scale, pos, (0., 0.), config);
+        (Some(w), Some(h), glyphs)
     }
 
     pub fn measure_glyphs(
@@ -180,8 +196,8 @@ impl TextRenderer {
         scale: Scale,
         position: Pos,
         justify: (f32, f32),
-        config: TextConfig
-    ) -> (f32, f32) {
+        config: TextConfig,
+    ) -> (f32, f32, Vec<LayoutGlyph>) {
         let fs = &mut self.font_system;
         let buffer = &mut self.buffer;
         let rendered_glyphs = &mut self.rendered_glyphs;
@@ -189,13 +205,17 @@ impl TextRenderer {
         let lines = buffer.layout_runs().filter(|run| run.line_w != 0.0).count();
         let total_height = lines as f32 * buffer.metrics().line_height;
         let mut total_width: f32 = 0.;
+
+        let mut glyphs: Vec<LayoutGlyph> = vec![];
+
         for run in buffer.layout_runs() {
             for glyph in run.glyphs {
                 total_width += glyph.w;
+                glyphs.push(glyph.clone());
             }
         }
 
-        (total_width, total_height)
+        (total_width, total_height, glyphs)
     }
 
     pub fn fill_to_cmds(
@@ -204,7 +224,7 @@ impl TextRenderer {
         scale: Scale,
         position: Pos,
         justify: (f32, f32),
-        config: TextConfig
+        config: TextConfig,
     ) -> Result<Vec<(FontColor, GlyphDrawCommands)>, ErrorKind> {
         let fs = &mut self.font_system;
         let buffer = &mut self.buffer;
@@ -218,7 +238,10 @@ impl TextRenderer {
         for run in buffer.layout_runs() {
             for glyph in run.glyphs {
                 let physical_glyph = glyph.physical(
-                    (position.x, position.y + scale.height * justify.1 - total_height * justify.1),
+                    (
+                        position.x,
+                        position.y + scale.height * justify.1 - total_height * justify.1,
+                    ),
                     1.0,
                 );
                 let cache_key = physical_glyph.cache_key;
@@ -244,7 +267,11 @@ impl TextRenderer {
                         Source::ColorBitmap(StrikeWith::BestFit),
                         Source::Outline,
                     ])
-                    .format(if config.subpixel { Format::Subpixel } else { Format::Alpha })
+                    .format(if config.subpixel {
+                        Format::Subpixel
+                    } else {
+                        Format::Alpha
+                    })
                     .offset(offset)
                     .render(&mut scaler, cache_key.glyph_id);
 
@@ -261,8 +288,9 @@ impl TextRenderer {
                         for (texture_index, glyph_atlas) in
                             self.glyph_textures.iter_mut().enumerate()
                         {
-                            if let Some((x, y)) =
-                                glyph_atlas.atlas.add_rect(alloc_w as usize, alloc_h as usize)
+                            if let Some((x, y)) = glyph_atlas
+                                .atlas
+                                .add_rect(alloc_w as usize, alloc_h as usize)
                             {
                                 found = Some((texture_index, x, y));
                                 break;
@@ -344,10 +372,12 @@ impl TextRenderer {
                         .or_insert_with(HashMap::default)
                 };
 
-                let cmd = cmd_map.entry(rendered.texture_index).or_insert_with(|| DrawCommand {
-                    image_id: self.glyph_textures[rendered.texture_index].image_id,
-                    quads: Vec::new(),
-                });
+                let cmd = cmd_map
+                    .entry(rendered.texture_index)
+                    .or_insert_with(|| DrawCommand {
+                        image_id: self.glyph_textures[rendered.texture_index].image_id,
+                        quads: Vec::new(),
+                    });
 
                 let mut q = Quad::default();
                 let it = 1.0 / TEXTURE_SIZE as f32;

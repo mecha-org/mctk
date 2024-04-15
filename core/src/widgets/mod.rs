@@ -27,5 +27,8 @@ pub use slider::Slider;
 mod carousel;
 pub use carousel::Carousel;
 
-// mod textbox;
-// pub use textbox::{TextBox, TextBoxAction};
+mod textbox;
+pub use textbox::{TextBox, TextBoxAction, TextBoxVariant};
+
+// mod slide_show;
+// pub use slide_show::SlideShow;
