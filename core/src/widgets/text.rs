@@ -130,7 +130,7 @@ impl Component for Text {
             line_height = self.style_val("line_height").unwrap().f32();
         }
 
-        let font = Some(String::from("SpaceGrotesk-Bold"));
+        // let font = Some(String::from("SpaceGrotesk-Bold"));
 
         // let screen_position = (
         //     match h_alignment {
