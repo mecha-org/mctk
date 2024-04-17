@@ -4,7 +4,7 @@ mod button;
 pub use button::Button;
 
 mod icon_button;
-pub use icon_button::IconButton;
+pub use icon_button::{IconButton, IconType};
 
 mod rounded_rect;
 pub use rounded_rect::RoundedRect;
