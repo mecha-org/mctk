@@ -1,3 +1,4 @@
+use std::hash::Hash;
 use std::time::Instant;
 
 // use super::ToolTip;
@@ -8,6 +9,12 @@ use crate::{event, lay, rect};
 use crate::{node, node::Node};
 use crate::{size_pct, types::*};
 use mctk_macros::{component, state_component_impl};
+
+#[derive(Debug)]
+pub enum IconType {
+    Svg,
+    Png,
+}
 
 #[derive(Debug, Default)]
 struct IconButtonState {
@@ -20,6 +27,7 @@ struct IconButtonState {
 #[component(State = "IconButtonState", Styled, Internal)]
 pub struct IconButton {
     pub icon: String,
+    pub icon_type: IconType,
     pub on_click: Option<Box<dyn Fn() -> Message + Send + Sync>>,
     pub tool_tip: Option<String>,
 }
@@ -36,6 +44,7 @@ impl IconButton {
     pub fn new<S: Into<String>>(icon: S) -> Self {
         Self {
             icon: icon.into(),
+            icon_type: IconType::Svg,
             on_click: None,
             tool_tip: None,
             state: Some(IconButtonState::default()),
@@ -54,6 +63,11 @@ impl IconButton {
         self.tool_tip = Some(t);
         self
     }
+
+    pub fn icon_type(mut self, it: IconType) -> Self {
+        self.icon_type = it;
+        self
+    }
 }
 
 #[state_component_impl(IconButtonState)]
@@ -66,6 +80,21 @@ impl Component for IconButton {
         let background_color: Color = self.style_val("background_color").into();
         let border_color: Color = self.style_val("border_color").into();
         let border_width: f32 = self.style_val("border_width").unwrap().f32();
+
+        let icon = match self.icon_type {
+            IconType::Svg => node!(
+                super::Svg::new(self.icon.clone()),
+                lay![
+                    size: size_pct!(100.0),
+                ],
+            ),
+            IconType::Png => node!(
+                super::Image::new(self.icon.clone()),
+                lay![
+                    size: size_pct!(100.0),
+                ],
+            ),
+        };
 
         let mut base = node!(
             super::RoundedRect {
@@ -88,12 +117,7 @@ impl Component for IconButton {
                 axis_alignment: crate::layout::Alignment::Center,
             )
         )
-        .push(node!(
-            super::Svg::new(self.icon.clone()),
-            lay![
-                size: size_pct!(100.0),
-            ],
-        ));
+        .push(icon);
 
         Some(base)
     }
