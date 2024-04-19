@@ -165,6 +165,14 @@ impl Component for IconButton {
         self.state_mut().pressed = false;
     }
 
+    fn on_touch_down(&mut self, event: &mut event::Event<event::TouchDown>) {
+        self.state_mut().pressed = true;
+    }
+
+    fn on_touch_up(&mut self, _event: &mut event::Event<event::TouchUp>) {
+        self.state_mut().pressed = false;
+    }
+
     fn on_click(&mut self, event: &mut event::Event<event::Click>) {
         if let Some(f) = &self.on_click {
             event.emit(f());
