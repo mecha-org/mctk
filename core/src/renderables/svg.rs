@@ -30,6 +30,11 @@ impl Svg {
     pub fn render(&self, canvas: &mut Canvas, svgs: &mut HashMap<String, SvgData>) {
         let Instance { pos, scale, .. } = self.instance_data;
 
+        if svgs.get_mut(&self.instance_data.name).is_none() {
+            println!("error: svg not found {:?}", self.instance_data.name);
+            return;
+        }
+
         let svg_data = svgs.get_mut(&self.instance_data.name).unwrap();
 
         let Pos { x, y, .. } = pos;
@@ -38,10 +43,6 @@ impl Svg {
         canvas.save();
         canvas.translate(x, y);
 
-        // println!(
-        //     "svg width {} height {} bounds width {} height {}",
-        //     width, height, svg_data.scale.width, svg_data.scale.height
-        // );
         canvas.scale(width / svg_data.scale.width, height / svg_data.scale.height);
 
         for (path, fill, stroke, transform) in &mut svg_data.paths {
