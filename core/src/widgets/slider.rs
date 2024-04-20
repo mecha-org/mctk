@@ -21,6 +21,7 @@ pub struct Slider {
     pub on_slide: Option<Box<dyn Fn(i32) -> Message + Send + Sync>>,
 }
 
+#[derive(Debug)]
 enum SliderMsg {
     ValueChanged(i32),
 }
@@ -79,9 +80,19 @@ impl Component for Slider {
                     m.push(slide_fn(*value));
                 }
             }
-            None => panic!(),
+            _ => (),
         }
         m
+    }
+
+    fn on_click(&mut self, event: &mut Event<event::Click>) {
+        event.stop_bubbling();
+        let click_position = event.relative_logical_position();
+        let slider_width = event.current_aabb.unwrap().width();
+        let value_changed = click_position.x / slider_width * 100.;
+        if let Some(slide_fn) = &self.on_slide {
+            event.emit(slide_fn(value_changed.min(100.).max(0.) as i32));
+        }
     }
 
     fn render(&mut self, context: RenderContext) -> Option<Vec<Renderable>> {
