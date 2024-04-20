@@ -11,6 +11,7 @@ use crate::renderables::{
 use crate::renderables::{Circle, Line, Rect, Renderable};
 use crate::{lay, msg, node, size, size_pct, types::*, Node};
 use std::hash::Hash;
+use std::ops::Neg;
 
 #[derive(Debug, Default)]
 struct SliderState {}
@@ -103,7 +104,7 @@ impl Component for Slider {
         println!("touch down postion is {:?}", click_position);
 
         let slider_width = event.current_aabb.unwrap().width();
-        let value_changed = click_position.x / slider_width * 100.;
+        let value_changed = click_position.x.neg() / slider_width * 100.;
         if let Some(slide_fn) = &self.on_slide {
             event.emit(slide_fn(value_changed.min(100.).max(0.) as i32));
         }
