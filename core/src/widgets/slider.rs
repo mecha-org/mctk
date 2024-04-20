@@ -85,9 +85,23 @@ impl Component for Slider {
         m
     }
 
-    fn on_click(&mut self, event: &mut Event<event::Click>) {
+    fn on_mouse_down(&mut self, event: &mut Event<event::MouseDown>) {
         event.stop_bubbling();
         let click_position = event.relative_logical_position();
+        println!("mouse down postion is {:?}", click_position);
+
+        let slider_width = event.current_aabb.unwrap().width();
+        let value_changed = click_position.x / slider_width * 100.;
+        if let Some(slide_fn) = &self.on_slide {
+            event.emit(slide_fn(value_changed.min(100.).max(0.) as i32));
+        }
+    }
+
+    fn on_touch_down(&mut self, event: &mut Event<event::TouchDown>) {
+        event.stop_bubbling();
+        let click_position = event.relative_logical_position();
+        println!("touch down postion is {:?}", click_position);
+
         let slider_width = event.current_aabb.unwrap().width();
         let value_changed = click_position.x / slider_width * 100.;
         if let Some(slide_fn) = &self.on_slide {
