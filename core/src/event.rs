@@ -428,6 +428,28 @@ impl<T: EventInput> Event<T> {
         (self.mouse_position - Point { x: pos.x, y: pos.y }).unscale(self.scale_factor)
     }
 
+    /// The current absolutely touch position, in physical coordinates.
+    pub fn physical_touch_position(&self) -> Point {
+        self.touch_position
+    }
+
+    /// The current absolutely touch position, in logical coordinates.
+    pub fn logical_touch_position(&self) -> Point {
+        self.touch_position.unscale(self.scale_factor)
+    }
+
+    /// The current touch position relative to this Node's AABB, in physical coordinates.
+    pub fn relative_physical_position_touch(&self) -> Point {
+        let pos = self.current_aabb.unwrap().pos;
+        self.touch_position - Point { x: pos.x, y: pos.y }
+    }
+
+    /// The current touch position relative to this Node's AABB, in logical coordinates.
+    pub fn relative_logical_position_touch(&self) -> Point {
+        let pos = self.current_aabb.unwrap().pos;
+        (self.touch_position - Point { x: pos.x, y: pos.y }).unscale(self.scale_factor)
+    }
+
     /// Returns which child of this Node the mouse is over, if any.
     pub fn over_child_n(&self) -> Option<usize> {
         self.over_child_n
