@@ -100,11 +100,11 @@ impl Component for Slider {
 
     fn on_touch_down(&mut self, event: &mut Event<event::TouchDown>) {
         event.stop_bubbling();
-        let click_position = event.relative_logical_position();
+        let click_position = event.relative_logical_position_touch();
         println!("touch down postion is {:?}", click_position);
 
         let slider_width = event.current_aabb.unwrap().width();
-        let value_changed = click_position.x.neg() / slider_width * 100.;
+        let value_changed = click_position.x / slider_width * 100.;
         if let Some(slide_fn) = &self.on_slide {
             event.emit(slide_fn(value_changed.min(100.).max(0.) as i32));
         }
