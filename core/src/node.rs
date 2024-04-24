@@ -815,10 +815,6 @@ impl Node {
         self.handle_event_under_touch(event, |node, e| node.component.on_touch_up(e));
     }
 
-    pub(crate) fn touch_moved(&mut self, event: &mut Event<event::TouchMoved>) {
-        self.handle_event_under_touch(event, |node, e| node.component.on_touch_moved(e));
-    }
-
     pub(crate) fn touch_cancel(&mut self, event: &mut Event<event::TouchCancel>) {
         self.handle_targeted_event(event, |node, e| node.component.on_touch_cancel(e));
     }
@@ -831,6 +827,10 @@ impl Node {
         self.handle_targeted_event(event, |node, e| node.component.on_drag(e));
     }
 
+    pub(crate) fn touch_drag(&mut self, event: &mut Event<event::TouchDrag>) {
+        self.handle_targeted_event(event, |node, e| node.component.on_touch_drag(e));
+    }
+
     pub(crate) fn drag_start(&mut self, event: &mut Event<event::DragStart>) {
         self.handle_event_under_mouse(event, |node, e| {
             e.target = Some(node.id);
@@ -838,8 +838,19 @@ impl Node {
         });
     }
 
+    pub(crate) fn touch_drag_start(&mut self, event: &mut Event<event::TouchDragStart>) {
+        self.handle_event_under_touch(event, |node, e| {
+            e.target = Some(node.id);
+            node.component.on_touch_drag_start(e)
+        });
+    }
+
     pub(crate) fn drag_end(&mut self, event: &mut Event<event::DragEnd>) {
         self.handle_targeted_event(event, |node, e| node.component.on_drag_end(e));
+    }
+
+    pub(crate) fn touch_drag_end(&mut self, event: &mut Event<event::TouchDragEnd>) {
+        self.handle_targeted_event(event, |node, e| node.component.on_touch_drag_end(e));
     }
 
     // DND

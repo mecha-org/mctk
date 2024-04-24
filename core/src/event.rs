@@ -174,6 +174,27 @@ pub struct TouchCancel {
 }
 impl EventInput for TouchCancel {}
 
+/// [`EventInput`] type for drag events.
+#[derive(Debug, Copy, Clone)]
+pub struct TouchDrag {
+    /// The logical start position of the drag.
+    pub start_pos: Point,
+}
+impl EventInput for TouchDrag {}
+
+/// [`EventInput`] type for drag start events.
+#[derive(Debug)]
+pub struct TouchDragStart();
+impl EventInput for TouchDragStart {}
+
+/// [`EventInput`] type for drag end events.
+#[derive(Debug, Copy, Clone)]
+pub struct TouchDragEnd {
+    /// The logical start position of the drag.
+    pub start_pos: Point,
+}
+impl EventInput for TouchDragEnd {}
+
 /// [`EventInput`] type for key down events.
 #[derive(Debug)]
 pub struct KeyDown(
@@ -561,8 +582,11 @@ pub(crate) struct EventCache {
     pub last_mouse_click_position: Point,
     // This is used as the start of the drag position, even if we haven't decided to start dragging
     pub drag_started: Option<Point>,
+    // This is used as the start of the touch drag position, even if we haven't decided to start dragging
+    pub touch_drag_started: Option<Point>,
     // This is used as the indicator of whether a drag is actually ongoing
     pub drag_button: Option<MouseButton>,
+    pub is_touch_drag: bool,
     pub drag_target: Option<u64>,
     pub scale_factor: f32,
     pub drag_data: Vec<Data>,
@@ -602,7 +626,9 @@ impl EventCache {
             last_touch_down: Instant::now(),
             touch_position: Default::default(),
             drag_button: None,
+            is_touch_drag: false,
             drag_started: None,
+            touch_drag_started: None,
             drag_target: None,
             drag_data: vec![],
             scale_factor,
@@ -617,6 +643,7 @@ impl EventCache {
         self.drag_started = None;
         self.drag_target = None;
         self.drag_data = vec![];
+        self.touch_held = false;
     }
 
     pub(crate) fn key_down(&mut self, key: Key) {
