@@ -217,17 +217,22 @@ pub trait Component: fmt::Debug {
     /// Handle touch up events. These events will only be sent if the touch is over the Component.
     fn on_touch_up(&mut self, _event: &mut Event<event::TouchUp>) {}
     /// Handle touch up events. These events will only be sent if the touch is over the Component.
-    fn on_touch_moved(&mut self, _event: &mut Event<event::TouchMoved>) {}
     /// Handle touch cancel events. These events will only be sent if the touch is over the Component.
     fn on_touch_cancel(&mut self, _event: &mut Event<event::TouchCancel>) {}
     /// Handle scroll events. These events will only be sent if the mouse is over the Component.
     fn on_scroll(&mut self, _event: &mut Event<event::Scroll>) {}
     /// Handle mouse drag events (i.e. the user clicks a mouse button over the Component and starts moving it). These events will only be sent if the mouse is over the Component.
     fn on_drag(&mut self, _event: &mut Event<event::Drag>) {}
+    /// Handle touch drag events (i.e. the user touches over the Component and starts moving). These events will only be sent if the touch is over the Component.
+    fn on_touch_drag(&mut self, _event: &mut Event<event::TouchDrag>) {}
     /// Handle the start of a mouse drag events (i.e. the user clicks a mouse button over the Component and starts moving it). These events will only be sent if the mouse is over the Component.
     fn on_drag_start(&mut self, _event: &mut Event<event::DragStart>) {}
+    /// Handle the start of a touch drag events (i.e. the user  touches the Component and starts moving). These events will only be sent if the touch is over the Component.
+    fn on_touch_drag_start(&mut self, _event: &mut Event<event::TouchDragStart>) {}
     /// Handle the end of a mouse drag events (i.e. the user clicks a mouse button over the Component and starts moving it). These events will only be sent if the mouse is over the Component.
     fn on_drag_end(&mut self, _event: &mut Event<event::DragEnd>) {}
+    /// Handle the end of a touch drag events (i.e. the user touches over the Component and starts moving). These events will only be sent if the touch is over the Component.
+    fn on_touch_drag_end(&mut self, _event: &mut Event<event::TouchDragEnd>) {}
     /// Handle focus events. This event occurs when [`Event#Focus`][crate::Event#method.focus] is called on an event belonging to this component.
     fn on_focus(&mut self, _event: &mut Event<event::Focus>) {}
     /// Handle blue events. This event occurs when this component loses its focus, either by another component gaining focus, or [`Event#blur`][crate::Event#method.blur] being called on an event belonging to this component.

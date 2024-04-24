@@ -86,6 +86,33 @@ impl Component for Slider {
         m
     }
 
+    fn on_touch_drag(&mut self, event: &mut Event<event::TouchDrag>) {
+        println!("Slider::on_touch_drag()");
+
+        let slider_position = event.relative_logical_position_touch();
+        let slider_width = event.current_aabb.unwrap().width();
+
+        let value_changed = slider_position.x / slider_width * 100.;
+
+        println!(
+            "value_changed {:?} slider position {:?}",
+            value_changed as i32, slider_position
+        );
+        if let Some(slide_fn) = &self.on_slide {
+            event.emit(slide_fn(value_changed.min(100.).max(0.) as i32));
+        }
+    }
+
+    fn on_touch_drag_start(&mut self, event: &mut Event<event::TouchDragStart>) {
+        println!("Slider::on_touch_drag_start()");
+        event.stop_bubbling();
+    }
+
+    fn on_touch_drag_end(&mut self, event: &mut Event<event::TouchDragEnd>) {
+        println!("Slider::on_touch_drag_end()");
+        event.stop_bubbling();
+    }
+
     fn on_mouse_down(&mut self, event: &mut Event<event::MouseDown>) {
         event.stop_bubbling();
         let click_position = event.relative_logical_position();
@@ -241,35 +268,5 @@ impl Component for Pointer {
         )));
 
         Some(rs)
-    }
-
-    fn on_drag_start(&mut self, event: &mut Event<event::DragStart>) {
-        //println!("Drag start. Got child {:?}", event.over_subchild_n(),);
-        event.stop_bubbling();
-    }
-
-    fn on_drag(&mut self, event: &mut Event<event::Drag>) {
-        //println!("Dragging {:?}", event.physical_mouse_position());
-        // println!(
-        //     "Delta {:?} {:?} {:?} {:?}",
-        //     event.logical_delta(),
-        //     event.physical_delta(),
-        //     event.bounded_physical_delta(),
-        //     event.bounded_logical_delta(),
-        // );
-
-        let slider_position = event.relative_logical_position();
-        let slider_width = event.current_aabb.unwrap().width();
-
-        let value_changed = slider_position.x / slider_width * 100.;
-
-        //println!("value_changed{:?}", value_changed as i32);
-        event.emit(msg!(SliderMsg::ValueChanged(
-            value_changed.min(100.).max(0.) as i32
-        )));
-    }
-
-    fn on_drag_end(&mut self, event: &mut Event<event::DragEnd>) {
-        //println!("Drag stop at {:?}", event.relative_logical_position());
     }
 }

@@ -602,7 +602,44 @@ impl<W: 'static + Window, A: 'static + RootComponent<B> + Component + Default + 
                 self.event_cache.last_touch_position = pos;
 
                 // End drag
-                if self.event_cache.touch_held {
+                if self.event_cache.is_touch_drag {
+                    let mut drag_end_event = Event::new(
+                        event::TouchDragEnd {
+                            start_pos: self.event_cache.touch_drag_started.unwrap(),
+                        },
+                        &self.event_cache,
+                    );
+                    self.handle_event(
+                        Node::touch_drag_end,
+                        &mut drag_end_event,
+                        self.event_cache.drag_target,
+                    );
+
+                    let drag_distance = self
+                        .event_cache
+                        .touch_drag_started
+                        .unwrap()
+                        .dist(self.event_cache.touch_position);
+                    if drag_distance < event::DRAG_CLICK_MAX_DIST {
+                        // Send a Click event if the drag was quite short
+                        let mut click_event =
+                            Event::new(event::Click(MouseButton::Left), &self.event_cache);
+                        self.handle_event(Node::click, &mut click_event, None);
+                    }
+
+                    // Unfocus when clicking a thing not focused
+                    if drag_end_event.current_node_id != Some(self.event_cache.focus)
+                    // Ignore the root node, which is the default focus
+                        && self.event_cache.focus != self.node_ref().id
+                    {
+                        self.blur();
+                    }
+
+                    // Clean up event cache
+                    self.event_cache.touch_drag_started = None;
+                    self.event_cache.is_touch_drag = false;
+                    self.event_cache.touch_up(pos.x, pos.y);
+                } else if self.event_cache.touch_held {
                     // Resolve click
                     self.event_cache.touch_up(pos.x, pos.y);
                     let event_current_node_id = if is_double_tap {
@@ -628,10 +665,44 @@ impl<W: 'static + Window, A: 'static + RootComponent<B> + Component + Default + 
             }
             Input::Touch(TouchAction::Moved { x, y }) => {
                 let pos = Point::new(*x, *y) * self.event_cache.scale_factor;
-                let mut event =
-                    Event::new(event::TouchMoved { x: pos.x, y: pos.y }, &self.event_cache);
-                self.event_cache.touch_moved(pos.x, pos.y);
-                self.handle_event(Node::touch_moved, &mut event, None);
+
+                if self.event_cache.touch_held {
+                    if self.event_cache.touch_drag_started.is_none() {
+                        self.event_cache.touch_drag_started = Some(self.event_cache.touch_position);
+                    }
+
+                    let drag_start = self.event_cache.touch_drag_started.unwrap();
+
+                    if !self.event_cache.is_touch_drag
+                        && ((drag_start.x - pos.x).abs() > event::DRAG_THRESHOLD
+                            || (drag_start.y - pos.y).abs() > event::DRAG_THRESHOLD)
+                    {
+                        self.event_cache.is_touch_drag = true;
+                        let mut drag_start_event =
+                            Event::new(event::TouchDragStart(), &self.event_cache);
+                        drag_start_event.mouse_position =
+                            self.event_cache.touch_drag_started.unwrap();
+                        self.handle_event(Node::touch_drag_start, &mut drag_start_event, None);
+                        self.event_cache.drag_target = drag_start_event.target;
+                    }
+                }
+
+                self.event_cache.touch_position = pos;
+
+                let touch_held = self.event_cache.touch_held;
+                if touch_held {
+                    let mut drag_event = Event::new(
+                        event::TouchDrag {
+                            start_pos: self.event_cache.touch_drag_started.unwrap(),
+                        },
+                        &self.event_cache,
+                    );
+                    self.handle_event_without_focus(
+                        Node::touch_drag,
+                        &mut drag_event,
+                        self.event_cache.drag_target,
+                    );
+                }
             }
             Input::Touch(TouchAction::Cancel { x, y }) => {
                 let pos = Point::new(*x, *y) * self.event_cache.scale_factor;
