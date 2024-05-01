@@ -15,7 +15,7 @@ pub use rect::Rect;
 pub use svg::Svg;
 pub use text::Text;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Renderable {
     Rect(Rect),
     Line(Line),

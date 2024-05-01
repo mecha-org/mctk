@@ -37,9 +37,11 @@ pub struct Instance {
     pub gradient: Option<Gradient>,
     #[builder(default = "CompositeOperation::SourceOver")]
     pub composite_operation: CompositeOperation,
+    #[builder(default = "None")]
+    pub scissor: Option<bool>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Rect {
     pub instance_data: Instance,
 }
@@ -57,6 +59,7 @@ impl Rect {
                 border_size: 0.0,
                 gradient: None,
                 composite_operation: CompositeOperation::SourceOver,
+                scissor: None,
             },
         }
     }
@@ -76,6 +79,7 @@ impl Rect {
             border_size,
             gradient,
             composite_operation,
+            scissor,
         } = self.instance_data.clone();
         let origin = pos;
         let size = scale;
@@ -110,8 +114,33 @@ impl Rect {
 
         let mut paint = Paint::color(border_color.into());
         paint.set_line_width(border_size);
+
         canvas.stroke_path(&path, &paint);
+
         canvas.global_composite_operation(CompositeOperation::SourceOver);
+
+        // println!(
+        //     "render color {:?} x {:?} y {:?} w {:?} h {:?} ",
+        //     color, origin.x, origin.y, size.width, size.height,
+        // );
+
+        match scissor {
+            Some(true) => {
+                // println!(
+                //     "SettingScissor color {:?} x {:?} y {:?} w {:?} h {:?} ",
+                //     color, origin.x, origin.y, size.width, size.height,
+                // );
+                canvas.scissor(origin.x, origin.y, size.width, size.height);
+            }
+            Some(false) => {
+                // println!(
+                //     "RemovingScissor color {:?} x {:?} y {:?} w {:?} h {:?} ",
+                //     color, origin.x, origin.y, size.width, size.height,
+                // );
+                canvas.reset_scissor();
+            }
+            None => (),
+        }
 
         //Add gradient
         // match gradient {

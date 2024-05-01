@@ -1,8 +1,13 @@
 use super::types::Canvas;
-use crate::{renderer::text::TextRenderer, style::FontWeight, types::{Color, Pos}, Scale};
+use crate::{
+    renderer::text::TextRenderer,
+    style::FontWeight,
+    types::{Color, Pos},
+    Scale,
+};
 use cosmic_text::FontSystem;
 use derive_builder::Builder;
-use femtovg::{Align, Paint };
+use femtovg::{Align, Paint};
 
 #[derive(Clone, Debug, PartialEq, Builder)]
 pub struct Instance {
@@ -24,7 +29,7 @@ pub struct Instance {
     pub text: String,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Text {
     pub instance_data: Instance,
 }
@@ -55,10 +60,7 @@ impl Text {
     }
 
     pub fn render(&self, canvas: &mut Canvas, text_renderer: &mut TextRenderer) {
-        let Instance {
-            color,
-            ..
-        } = self.instance_data;
+        let Instance { color, .. } = self.instance_data;
 
         if let Ok(draw_commands) = text_renderer.draw_text(canvas, self.instance_data.clone()) {
             for (_, cmds) in draw_commands.into_iter() {

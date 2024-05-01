@@ -15,7 +15,7 @@ pub struct Instance {
     pub bg_image: Option<ImageId>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Circle {
     pub instance_data: Instance,
 }

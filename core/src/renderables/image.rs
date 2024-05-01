@@ -21,7 +21,7 @@ pub struct Instance {
     pub radius: f32,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Image {
     pub instance_data: Instance,
 }

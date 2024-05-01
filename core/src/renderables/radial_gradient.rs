@@ -12,7 +12,7 @@ pub struct Instance {
     pub colors: Vec<(f32, Color)>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct RadialGradient {
     pub instance_data: Instance,
 }
