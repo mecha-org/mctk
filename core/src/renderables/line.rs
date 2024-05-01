@@ -15,7 +15,7 @@ pub struct Instance {
     pub width: f32,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Line {
     pub instance_data: Instance,
 }

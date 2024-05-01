@@ -2,12 +2,12 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::component::*;
 use crate::event::{self, Event, EventInput};
 use crate::font_cache::FontCache;
 use crate::renderables::Renderable;
 use crate::renderer::Caches;
 use crate::types::*;
+use crate::{component::*, widgets};
 // use crate::font_cache::FontCache;
 use crate::layout::*;
 // use crate::render::{Caches, Renderable};
@@ -85,6 +85,7 @@ pub struct Node {
     pub(crate) component: Box<dyn Component + Send + Sync>,
     pub(crate) render_cache: Option<Vec<Renderable>>,
     pub(crate) children: Vec<Node>,
+    pub(crate) clip: Option<(Box<Node>, Box<Node>)>,
     pub(crate) layout: Layout,
     pub(crate) layout_result: LayoutResult,
     pub(crate) aabb: AABB,
@@ -148,6 +149,7 @@ impl Node {
             render_cache: None,
             props_hash: u64::max_value(),
             render_hash: u64::max_value(),
+            clip: None,
         }
     }
 
@@ -386,10 +388,32 @@ impl Node {
                     prev_state: prev.render_cache.take(),
                     scale_factor,
                 };
-                self.render_cache = self.component.render(context);
+                self.render_cache = self.component.render(context.clone());
+
+                // println!("render::aabb - {:?}", self.aabb);
+                if self.scrollable() {
+                    let (mut clip_start, mut clip_end) = (
+                        Box::new(node!(widgets::RoundedRect {
+                            scissor: Some(true),
+                            background_color: Color::TRANSPARENT,
+                            border_color: Color::TRANSPARENT,
+                            border_width: 0.,
+                            radius: (0., 0., 0., 0.)
+                        })),
+                        Box::new(node!(widgets::RoundedRect {
+                            scissor: Some(false),
+                            background_color: Color::TRANSPARENT,
+                            border_color: Color::TRANSPARENT,
+                            border_width: 0.,
+                            radius: (0., 0., 0., 0.)
+                        })),
+                    );
+                    clip_start.render_cache = clip_start.component.render(context.clone());
+                    clip_end.render_cache = clip_end.component.render(context.clone());
+                    self.clip = Some((clip_start, clip_end));
+                    // println!("clip set");
+                }
                 ret = true;
-            } else {
-                self.render_cache = prev.render_cache.take();
             }
 
             let prev_children = &mut prev.children;
@@ -941,7 +965,19 @@ impl<'a> Iterator for NodeRenderableIterator<'a> {
             if self.queue.is_empty() && !self.frame_queue.is_empty() {
                 let (n, f) = self.frame_queue.pop().unwrap();
                 self.current_frame = f;
+                // println!(
+                //     "pushing children {:?} {:?}",
+                //     n.scrollable(),
+                //     n.clip.is_some()
+                // );
+                let has_clip = n.clip.is_some();
+                if has_clip {
+                    self.queue.push(n.clip.as_ref().unwrap().1.as_ref());
+                }
                 self.queue.extend(n.children.iter().collect::<Vec<&Node>>());
+                if has_clip {
+                    self.queue.push(n.clip.as_ref().unwrap().0.as_ref());
+                }
             }
         }
         None

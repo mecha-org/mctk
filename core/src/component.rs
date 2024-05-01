@@ -32,6 +32,7 @@ macro_rules! msg {
 }
 
 /// Passed to [`Component#render`][Component#method.render], with context required for rendering.
+#[derive(Clone)]
 pub struct RenderContext {
     /// The `AABB` that contains the given [`Component`] instance.
     pub aabb: AABB,

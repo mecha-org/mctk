@@ -86,6 +86,7 @@ impl Component for Button {
                 border_color,
                 border_width,
                 radius: (radius, radius, radius, radius),
+                ..Default::default()
             },
             lay!(
                 size: size_pct!(100.0),

@@ -1,5 +1,5 @@
 use std::hash::Hash;
-use std::ops::Add;
+use std::ops::Neg;
 
 use crate::component::{Component, ComponentHasher, RenderContext};
 use crate::event;
@@ -79,6 +79,78 @@ impl Div {
 
     fn scrollable(&self) -> bool {
         self.x_scrollable() || self.y_scrollable()
+    }
+
+    fn handle_drag_start(&mut self) {
+        let x_bar_pressed = self.state_ref().over_x_bar;
+        let y_bar_pressed = self.state_ref().over_y_bar;
+        let drag_start = self.state_ref().scroll_position;
+        self.state_mut().x_bar_pressed = x_bar_pressed;
+        self.state_mut().y_bar_pressed = y_bar_pressed;
+        self.state_mut().drag_start_position = drag_start;
+    }
+
+    fn handle_on_drag(
+        &mut self,
+        current_physical_aabb: AABB,
+        current_inner_scale: Option<Scale>,
+        physical_delta: Point,
+    ) {
+        if self.scrollable() {
+            let start_position = self.state_ref().drag_start_position;
+            let size = current_physical_aabb.size();
+            let inner_scale = current_inner_scale.unwrap();
+            let mut scroll_position = self.state_ref().scroll_position;
+
+            if self.state_ref().y_bar_pressed {
+                let drag = physical_delta.y;
+                let delta_position = drag * (inner_scale.height / size.height);
+                let max_position = inner_scale.height - size.height;
+                scroll_position.y = (start_position.y + delta_position)
+                    .round()
+                    .min(max_position)
+                    .max(0.0);
+            }
+
+            if self.state_ref().x_bar_pressed {
+                let drag = physical_delta.x;
+                let delta_position = drag * (inner_scale.width / size.width);
+                let max_position = inner_scale.width - size.width;
+                scroll_position.x = (start_position.x + delta_position)
+                    .round()
+                    .min(max_position)
+                    .max(0.0);
+            }
+
+            if self.y_scrollable() {
+                let drag = physical_delta.y.neg();
+                let delta_position = drag * (inner_scale.height / size.height);
+                let max_position = inner_scale.height - size.height;
+                scroll_position.y = (start_position.y + delta_position)
+                    .round()
+                    .min(max_position)
+                    .max(0.0);
+            }
+
+            if self.x_scrollable() {
+                let drag = physical_delta.x.neg();
+                let delta_position = drag * (inner_scale.width / size.width);
+                let max_position = inner_scale.width - size.width;
+                scroll_position.x = (start_position.x + delta_position)
+                    .round()
+                    .min(max_position)
+                    .max(0.0);
+            }
+
+            self.state_mut().scroll_position = scroll_position;
+        }
+    }
+
+    fn handle_drag_end(&mut self) {
+        if self.scrollable() {
+            self.state_mut().x_bar_pressed = false;
+            self.state_mut().y_bar_pressed = false;
+        }
     }
 }
 
@@ -180,54 +252,40 @@ impl Component for Div {
 
     fn on_drag_start(&mut self, event: &mut event::Event<event::DragStart>) {
         if self.scrollable() {
-            let x_bar_pressed = self.state_ref().over_x_bar;
-            let y_bar_pressed = self.state_ref().over_y_bar;
-            if x_bar_pressed || y_bar_pressed {
-                let drag_start = self.state_ref().scroll_position;
-                self.state_mut().x_bar_pressed = x_bar_pressed;
-                self.state_mut().y_bar_pressed = y_bar_pressed;
-                self.state_mut().drag_start_position = drag_start;
-                event.stop_bubbling();
-            }
+            self.handle_drag_start();
+            event.stop_bubbling();
+        }
+    }
+
+    fn on_touch_drag_start(&mut self, event: &mut event::Event<event::TouchDragStart>) {
+        if self.scrollable() {
+            self.handle_drag_start();
+            event.stop_bubbling();
         }
     }
 
     fn on_drag_end(&mut self, _event: &mut event::Event<event::DragEnd>) {
-        if self.scrollable() {
-            self.state_mut().x_bar_pressed = false;
-            self.state_mut().y_bar_pressed = false;
-        }
+        self.handle_drag_end();
+    }
+
+    fn on_touch_drag_end(&mut self, _event: &mut event::Event<event::TouchDragEnd>) {
+        self.handle_drag_end();
     }
 
     fn on_drag(&mut self, event: &mut event::Event<event::Drag>) {
-        if self.scrollable() {
-            let start_position = self.state_ref().drag_start_position;
-            let size = event.current_physical_aabb().size();
-            let inner_scale = event.current_inner_scale().unwrap();
-            let mut scroll_position = self.state_ref().scroll_position;
+        self.handle_on_drag(
+            event.current_physical_aabb(),
+            event.current_inner_scale(),
+            event.physical_delta(),
+        );
+    }
 
-            if self.state_ref().y_bar_pressed {
-                let drag = event.physical_delta().y;
-                let delta_position = drag * (inner_scale.height / size.height);
-                let max_position = inner_scale.height - size.height;
-                scroll_position.y = (start_position.y + delta_position)
-                    .round()
-                    .min(max_position)
-                    .max(0.0);
-            }
-
-            if self.state_ref().x_bar_pressed {
-                let drag = event.physical_delta().x;
-                let delta_position = drag * (inner_scale.width / size.width);
-                let max_position = inner_scale.width - size.width;
-                scroll_position.x = (start_position.x + delta_position)
-                    .round()
-                    .min(max_position)
-                    .max(0.0);
-            }
-
-            self.state_mut().scroll_position = scroll_position;
-        }
+    fn on_touch_drag(&mut self, event: &mut event::Event<event::TouchDrag>) {
+        self.handle_on_drag(
+            event.current_physical_aabb(),
+            event.current_inner_scale(),
+            event.physical_delta(),
+        );
     }
 
     fn scroll_position(&self) -> Option<ScrollPosition> {
@@ -281,6 +339,7 @@ impl Component for Div {
             .map_or(0.0, |x| (x * context.scale_factor.floor()).round());
 
         if let Some(bg) = self.background {
+            // println!("Background color {:?} {:?}", bg, context.scissor);
             let mut rect_instance = InstanceBuilder::default()
                 .pos(Pos {
                     x: context.aabb.pos.x,

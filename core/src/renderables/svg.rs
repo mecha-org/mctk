@@ -11,7 +11,7 @@ pub struct Instance {
     pub scale: Scale,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Svg {
     pub instance_data: Instance,
 }

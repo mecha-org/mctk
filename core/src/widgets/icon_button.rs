@@ -9,8 +9,9 @@ use crate::{event, lay, rect};
 use crate::{node, node::Node};
 use crate::{size_pct, types::*};
 use mctk_macros::{component, state_component_impl};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum IconType {
     Svg,
     Png,
@@ -108,6 +109,7 @@ impl Component for IconButton {
                 border_color,
                 border_width,
                 radius: (radius, radius, radius, radius),
+                ..Default::default()
             },
             lay!(
                 size: size_pct!(100.0),

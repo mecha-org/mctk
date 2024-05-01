@@ -12,6 +12,7 @@ pub struct RoundedRect {
     pub border_color: Color,
     pub border_width: f32,
     pub radius: (f32, f32, f32, f32),
+    pub scissor: Option<bool>,
 }
 
 impl Default for RoundedRect {
@@ -21,6 +22,7 @@ impl Default for RoundedRect {
             border_color: Color::BLACK,
             border_width: 0.0,
             radius: (3.0, 3.0, 3.0, 3.0),
+            scissor: None,
         }
     }
 }
@@ -32,6 +34,7 @@ impl RoundedRect {
             border_color: Color::BLACK,
             border_width: 0.0,
             radius: (radius, radius, radius, radius),
+            scissor: None,
         }
     }
 
@@ -53,6 +56,7 @@ impl Component for RoundedRect {
     }
 
     fn render(&mut self, context: RenderContext) -> Option<Vec<Renderable>> {
+        // println!("Rounded rect render {:?}", self.scissor);
         let width = context.aabb.width();
         let height = context.aabb.height();
         let AABB { pos, .. } = context.aabb;
@@ -61,6 +65,7 @@ impl Component for RoundedRect {
             .pos(pos)
             .scale(Scale { width, height })
             .color(self.background_color)
+            .scissor(self.scissor)
             .radius(self.radius)
             .build()
             .unwrap();
