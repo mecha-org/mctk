@@ -586,7 +586,7 @@ impl TouchHandler for LayerShellSctkWindow {
             time,
             position: Position {
                 x: position.0 as f32,
-                y: position.0 as f32,
+                y: position.1 as f32,
             },
             scale_factor,
         }));
