@@ -55,17 +55,15 @@ impl Image {
 
         canvas.global_composite_operation(composite_operation);
 
-        let image_id: &ImageId = match assets.get(&self.instance_data.name) {
-            Some(v) => v,
-            None => panic!("asset not found {:?}", &self.instance_data.name),
-        };
-        let Pos { x, y, z } = pos;
-        let Scale { width, height } = scale;
+        if let Some(image_id) = assets.get(&self.instance_data.name) {
+            let Pos { x, y, z } = pos;
+            let Scale { width, height } = scale;
 
-        let paint = Paint::image(*image_id, x, y, width, height, 0.0, 1.0);
-        let mut path = Path::new();
-        path.rounded_rect(x, y, width, height, radius);
-        canvas.fill_path(&path, &paint);
+            let paint = Paint::image(*image_id, x, y, width, height, 0.0, 1.0);
+            let mut path = Path::new();
+            path.rounded_rect(x, y, width, height, radius);
+            canvas.fill_path(&path, &paint);
+        }
 
         canvas.global_composite_operation(CompositeOperation::SourceOver);
     }
