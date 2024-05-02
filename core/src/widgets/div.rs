@@ -126,10 +126,10 @@ impl Div {
                     .max(0.0);
             }
 
-            if self.y_scrollable() {
+            if self.y_scrollable() && !self.state_ref().y_bar_pressed {
                 let drag = physical_delta.y.neg();
                 println!("Div::handle_on_drag() drag {:?}", drag);
-                let delta_position = drag * (inner_scale.height / size.height);
+                let delta_position = drag;
                 let max_position = inner_scale.height - size.height;
                 scroll_position.y = (start_position.y + delta_position)
                     .round()
@@ -137,9 +137,9 @@ impl Div {
                     .max(0.0);
             }
 
-            if self.x_scrollable() {
+            if self.x_scrollable() && !self.state_ref().x_bar_pressed {
                 let drag = physical_delta.x.neg();
-                let delta_position = drag * (inner_scale.width / size.width);
+                let delta_position = drag;
                 let max_position = inner_scale.width - size.width;
                 scroll_position.x = (start_position.x + delta_position)
                     .round()
