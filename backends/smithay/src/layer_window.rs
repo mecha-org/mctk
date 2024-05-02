@@ -177,8 +177,8 @@ impl LayerWindow {
                                         MouseEvent::WheelScrolled { delta } => {
                                             let scroll = match delta {
                                                 ScrollDelta::Lines { x, y } => Motion::Scroll {
-                                                    x: x * -10.0,
-                                                    y: y * -10.0,
+                                                    x: x * -30.0,
+                                                    y: y * -30.0,
                                                 },
                                                 ScrollDelta::Pixels { x, y } => Motion::Scroll {
                                                     x: -x as f32,

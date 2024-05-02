@@ -101,6 +101,10 @@ impl Div {
             let size = current_physical_aabb.size();
             let inner_scale = current_inner_scale.unwrap();
             let mut scroll_position = self.state_ref().scroll_position;
+            println!(
+                "Div::handle_on_drag() start_position {:?} size {:?} inner_scale {:?} scroll_position {:?}",
+                start_position, size, inner_scale, scroll_position
+            );
 
             if self.state_ref().y_bar_pressed {
                 let drag = physical_delta.y;
@@ -124,6 +128,7 @@ impl Div {
 
             if self.y_scrollable() {
                 let drag = physical_delta.y.neg();
+                println!("Div::handle_on_drag() drag {:?}", drag);
                 let delta_position = drag * (inner_scale.height / size.height);
                 let max_position = inner_scale.height - size.height;
                 scroll_position.y = (start_position.y + delta_position)
@@ -273,6 +278,12 @@ impl Component for Div {
     }
 
     fn on_drag(&mut self, event: &mut event::Event<event::Drag>) {
+        println!(
+            "Div::on_drag() current_physical_aabb() {:?} current_inner_scale() {:?} physical_delta() {:?}",
+            event.current_physical_aabb(),
+            event.current_inner_scale(),
+            event.physical_delta()
+        );
         self.handle_on_drag(
             event.current_physical_aabb(),
             event.current_inner_scale(),
@@ -281,6 +292,12 @@ impl Component for Div {
     }
 
     fn on_touch_drag(&mut self, event: &mut event::Event<event::TouchDrag>) {
+        println!(
+            "Div::on_touch_drag() current_physical_aabb() {:?} current_inner_scale() {:?} physical_delta() {:?}",
+            event.current_physical_aabb(),
+            event.current_inner_scale(),
+            event.physical_delta()
+        );
         self.handle_on_drag(
             event.current_physical_aabb(),
             event.current_inner_scale(),
