@@ -85,6 +85,24 @@ impl Component for Slider {
         }
         m
     }
+    fn on_drag(&mut self, event: &mut Event<event::Drag>) {
+        let slider_position = event.relative_logical_position();
+        let slider_width = event.current_aabb.unwrap().width();
+
+        let value_changed = slider_position.x / slider_width * 100.;
+
+        if let Some(slide_fn) = &self.on_slide {
+            event.emit(slide_fn(value_changed.min(100.).max(0.) as i32));
+        }
+    }
+
+    fn on_drag_start(&mut self, event: &mut Event<event::DragStart>) {
+        event.stop_bubbling();
+    }
+
+    fn on_drag_end(&mut self, event: &mut Event<event::DragEnd>) {
+        event.stop_bubbling();
+    }
 
     fn on_touch_drag(&mut self, event: &mut Event<event::TouchDrag>) {
         println!("Slider::on_touch_drag()");
