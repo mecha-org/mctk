@@ -152,6 +152,22 @@ impl Component for Button {
         // }
     }
 
+    fn on_touch_drag_start(&mut self, event: &mut event::Event<event::TouchDragStart>) {
+        event.stop_bubbling();
+    }
+
+    fn on_drag_start(&mut self, event: &mut event::Event<event::DragStart>) {
+        event.stop_bubbling();
+    }
+
+    fn on_drag_end(&mut self, _event: &mut event::Event<event::DragEnd>) {
+        self.state_mut().pressed = false;
+    }
+
+    fn on_touch_drag_end(&mut self, _event: &mut event::Event<event::TouchDragEnd>) {
+        self.state_mut().pressed = false;
+    }
+
     fn on_mouse_down(&mut self, event: &mut event::Event<event::MouseDown>) {
         self.state_mut().pressed = true;
     }
