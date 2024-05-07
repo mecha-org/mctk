@@ -5,13 +5,15 @@ use super::Caches;
 use crate::font_cache::FontCache;
 use crate::renderables::Renderable;
 use crate::{node::Node, types::PixelSize};
+use crate::{AssetParams, ImgFilter};
 use femtovg::renderer::OpenGl;
-use femtovg::{Canvas, Color, ImageFlags, ImageId};
+use femtovg::{Canvas, Color, ImageFlags, ImageId, ImageSource};
 use glutin::api::egl;
 use glutin::api::egl::context::PossiblyCurrentContext;
 use glutin::api::egl::surface::Surface;
 use glutin::context::{PossiblyCurrentContextGlSurfaceAccessor, PossiblyCurrentGlContext};
 use glutin::surface::{GlSurface, WindowSurface};
+use image::DynamicImage;
 use raw_window_handle::{RawDisplayHandle, RawWindowHandle};
 use std::collections::HashMap;
 use std::fmt;
@@ -20,19 +22,57 @@ use std::sync::{Arc, RwLock};
 
 fn load_assets(
     gl_canvas: &mut Canvas<OpenGl>,
-    assets: HashMap<String, String>,
+    assets: HashMap<String, AssetParams>,
 ) -> HashMap<String, ImageId> {
     let mut loaded_assets = HashMap::new();
 
-    for (name, path_) in assets.into_iter() {
-        match gl_canvas.load_image_file(path_.as_str(), ImageFlags::empty()) {
-            Ok(font_id) => {
-                loaded_assets.insert(name, font_id);
-            }
-            Err(e) => {
-                println!("error while loading png {:?} error: {:?}", name, e);
-            }
+    for (name, params) in assets.into_iter() {
+        let AssetParams { path, filter, blur } = params;
+        let image_r = image::open(path);
+
+        if let Err(e) = image_r {
+            println!("Error while opening image {:?} error: {:?}", name, e);
+            continue;
         }
+
+        let mut image = image_r.unwrap();
+
+        if let Some(sigma) = blur {
+            image = image.blur(sigma);
+        }
+
+        let buffer;
+        let img_src_r = match filter {
+            ImgFilter::RGB => ImageSource::try_from(&image),
+            ImgFilter::GRAY => {
+                //Temporary patch as gray scale image was not rendering
+                let gray_scale = image.grayscale().into_rgb8();
+                buffer = DynamicImage::ImageRgb8(gray_scale);
+                ImageSource::try_from(&buffer)
+            }
+        };
+
+        if let Err(e) = img_src_r {
+            println!("Error while creating image src {:?} error: {:?}", name, e);
+            continue;
+        }
+
+        let img_src = img_src_r.unwrap();
+
+        let img_create_res = gl_canvas.create_image(img_src, ImageFlags::empty());
+
+        if let Err(img_create_res) = img_create_res {
+            println!(
+                "Error while creating image {:?} error: {:?}",
+                name, img_create_res
+            );
+            continue;
+        }
+
+        let image_id = img_create_res.unwrap();
+        let x = gl_canvas.get_image(image_id).unwrap();
+
+        loaded_assets.insert(name, image_id);
     }
     loaded_assets
 }
@@ -42,7 +82,7 @@ fn init_canvas_renderer(
     raw_window_handle: RawWindowHandle,
     logical_size: PixelSize,
     scale_factor: f32,
-    assets: HashMap<String, String>,
+    assets: HashMap<String, AssetParams>,
 ) -> (CanvasContext, HashMap<String, ImageId>) {
     let size = logical_size;
     let width = size.width;

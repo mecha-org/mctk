@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use mctk_core::component::{Component, RootComponent};
 use mctk_core::input::{Button, Input, Motion, MouseButton};
 use mctk_core::reexports::cosmic_text;
+use mctk_core::types::AssetParams;
 use mctk_core::types::PixelSize;
 use mctk_core::ui::UI;
 use raw_window_handle::{
@@ -139,7 +140,7 @@ impl mctk_core::window::Window for Window {
         self.fonts.clone()
     }
 
-    fn assets(&self) -> HashMap<String, String> {
+    fn assets(&self) -> HashMap<String, AssetParams> {
         self.assets.clone()
     }
 

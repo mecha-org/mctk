@@ -3,6 +3,7 @@ use mctk_core::component::{self, Component, RootComponent};
 use mctk_core::input::{Button, Input, Motion, MouseButton, TouchAction};
 use mctk_core::raw_handle::RawWaylandHandle;
 use mctk_core::reexports::cosmic_text;
+use mctk_core::types::AssetParams;
 use mctk_core::types::PixelSize;
 use mctk_core::ui::UI;
 use pointer::{MouseEvent, ScrollDelta};
@@ -24,7 +25,7 @@ pub struct LayerWindow {
     handle: Option<RawWaylandHandle>,
     window_tx: Sender<WindowMessage>,
     fonts: cosmic_text::fontdb::Database,
-    assets: HashMap<String, String>,
+    assets: HashMap<String, AssetParams>,
     svgs: HashMap<String, String>,
 }
 unsafe impl Send for LayerWindow {}
@@ -35,7 +36,7 @@ pub struct LayerWindowParams {
     pub namespace: String,
     pub window_opts: WindowOptions,
     pub fonts: cosmic_text::fontdb::Database,
-    pub assets: HashMap<String, String>,
+    pub assets: HashMap<String, AssetParams>,
     pub svgs: HashMap<String, String>,
     pub layer_shell_opts: LayerOptions,
 }
@@ -275,7 +276,7 @@ impl mctk_core::window::Window for LayerWindow {
         self.fonts.clone()
     }
 
-    fn assets(&self) -> HashMap<String, String> {
+    fn assets(&self) -> HashMap<String, AssetParams> {
         self.assets.clone()
     }
 

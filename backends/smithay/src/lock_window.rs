@@ -2,8 +2,8 @@ use mctk_core::component::{self, Component, RootComponent};
 use mctk_core::input::{Button, Input, Motion, MouseButton, TouchAction};
 use mctk_core::raw_handle::RawWaylandHandle;
 use mctk_core::reexports::cosmic_text;
+use mctk_core::types::{AssetParams, PixelSize};
 use mctk_core::ui::UI;
-use mctk_core::PixelSize;
 use pointer::{MouseEvent, ScrollDelta};
 use raw_window_handle::{
     HasRawDisplayHandle, HasRawWindowHandle, RawDisplayHandle, RawWindowHandle,
@@ -24,7 +24,7 @@ pub struct SessionLockWindow {
     handle: Option<RawWaylandHandle>,
     window_tx: Sender<WindowMessage>,
     fonts: cosmic_text::fontdb::Database,
-    assets: HashMap<String, String>,
+    assets: HashMap<String, AssetParams>,
     svgs: HashMap<String, String>,
     session_lock_tx: Sender<SessionLockMessage>,
 }
@@ -39,7 +39,7 @@ pub enum SessionLockMessage {
 pub struct SessionLockWindowParams {
     pub window_opts: WindowOptions,
     pub fonts: cosmic_text::fontdb::Database,
-    pub assets: HashMap<String, String>,
+    pub assets: HashMap<String, AssetParams>,
     pub svgs: HashMap<String, String>,
     pub session_lock_tx: Sender<SessionLockMessage>,
     pub session_lock_rx: Channel<SessionLockMessage>,
@@ -270,7 +270,7 @@ impl mctk_core::window::Window for SessionLockWindow {
         self.fonts.clone()
     }
 
-    fn assets(&self) -> HashMap<String, String> {
+    fn assets(&self) -> HashMap<String, AssetParams> {
         self.assets.clone()
     }
 
