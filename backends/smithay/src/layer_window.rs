@@ -10,7 +10,7 @@ use pointer::{MouseEvent, ScrollDelta};
 use raw_window_handle::{
     HasRawDisplayHandle, HasRawWindowHandle, RawDisplayHandle, RawWindowHandle,
 };
-use smithay_client_toolkit::reexports::calloop::channel::{Event, Sender};
+use smithay_client_toolkit::reexports::calloop::channel::{Channel, Event, Sender};
 use smithay_client_toolkit::reexports::calloop::{self, EventLoop};
 use std::collections::HashMap;
 
@@ -27,6 +27,7 @@ pub struct LayerWindow {
     fonts: cosmic_text::fontdb::Database,
     assets: HashMap<String, AssetParams>,
     svgs: HashMap<String, String>,
+    layer_tx: Sender<LayerWindowMessage>,
 }
 unsafe impl Send for LayerWindow {}
 unsafe impl Sync for LayerWindow {}
@@ -39,7 +40,12 @@ pub struct LayerWindowParams {
     pub assets: HashMap<String, AssetParams>,
     pub svgs: HashMap<String, String>,
     pub layer_shell_opts: LayerOptions,
+    pub layer_tx: Sender<LayerWindowMessage>,
+    pub layer_rx: Channel<LayerWindowMessage>,
 }
+
+#[derive(Debug)]
+pub enum LayerWindowMessage {}
 
 impl LayerWindow {
     pub fn open_blocking<A, B>(
@@ -62,6 +68,8 @@ impl LayerWindow {
             assets,
             svgs,
             layer_shell_opts,
+            layer_tx,
+            layer_rx,
         } = params;
 
         let (window_tx, window_rx) = calloop::channel::channel();
@@ -85,6 +93,7 @@ impl LayerWindow {
                 fonts,
                 assets,
                 svgs,
+                layer_tx,
             },
             app_channel,
         );
@@ -248,6 +257,10 @@ impl LayerWindow {
         );
 
         (app_window, event_loop, window_tx.clone())
+    }
+
+    pub fn sender(&self) -> Sender<LayerWindowMessage> {
+        self.layer_tx.clone()
     }
 }
 

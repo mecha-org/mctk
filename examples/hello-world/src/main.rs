@@ -7,22 +7,27 @@ use mctk_core::reexports::cosmic_text;
 use mctk_core::renderables::{types, Renderable};
 use mctk_core::style::Styled;
 use mctk_core::widgets::{self, Button, Div, TextBox};
-use mctk_core::{lay, msg, rect, size, txt, AssetParams, Color};
+use mctk_core::{lay, msg, rect, size, size_pct, txt, AssetParams, Color};
 use mctk_core::{node, node::Node};
 use mctk_macros::{component, state_component_impl};
 use mctk_smithay::layer_surface::LayerOptions;
-use mctk_smithay::layer_window::LayerWindowParams;
+use mctk_smithay::layer_window::{LayerWindow, LayerWindowMessage, LayerWindowParams};
 use mctk_smithay::WindowOptions;
+use smithay_client_toolkit::reexports::calloop;
+use smithay_client_toolkit::reexports::calloop::channel::Sender;
 use smithay_client_toolkit::shell::wlr_layer;
 // use tracing_subscriber::EnvFilter;
 
 // App level channel
+#[derive(Debug)]
 pub enum AppMessage {}
 
 #[derive(Debug, Default)]
 pub struct AppState {
     value: f32,
     btn_pressed: bool,
+    window_sender: Option<Sender<LayerWindowMessage>>,
+    app_channel: Option<Sender<AppMessage>>,
 }
 
 #[derive(Debug, Clone)]
@@ -47,6 +52,8 @@ impl Component for App {
         self.state = Some(AppState {
             value: 30.,
             btn_pressed: false,
+            window_sender: None,
+            app_channel: None,
         })
     }
 
@@ -59,9 +66,9 @@ impl Component for App {
 
         Some(
             node!(
-                Div::new(),
+                Div::new().bg(Color::rgb(255., 0., 0.)),
                 lay![
-                    size: [480, 480],
+                    size: size_pct!(100.0),
                     direction: Direction::Column
                 ]
             )
@@ -80,25 +87,25 @@ impl Component for App {
                 lay![size: size!(180.0, 180.0), margin: [0., 0., 20., 0.]]
             ))
             .push(node!(
-                TextBox::new(Some("".to_string()))
-                    .style("background_color", Color::WHITE)
-                    .style("font_size", 16.)
-                    .style("text_color", Color::BLACK)
-                    .style("border_width", 0.)
-                    .style("cursor_color", Color::BLACK)
-                    .style("placeholder_color", Color::MID_GREY)
-                    .placeholder("Type here")
-                    .on_change(Box::new(|s| msg!(HelloEvent::TextBox {
-                        name: "textbox".to_string(),
-                        value: s.to_string(),
-                        update_type: "change".to_string(),
-                    })))
-                    .on_commit(Box::new(|s| msg!(HelloEvent::TextBox {
-                        name: "textbox".to_string(),
-                        value: s.to_string(),
-                        update_type: "commit".to_string(),
-                    }))),
-                [size: [300, 30]])),
+                   TextBox::new(Some("".to_string()))
+                       .style("background_color", Color::WHITE)
+                       .style("font_size", 16.)
+                       .style("text_color", Color::BLACK)
+                       .style("border_width", 0.)
+                       .style("cursor_color", Color::BLACK)
+                       .style("placeholder_color", Color::MID_GREY)
+                       .placeholder("Type here")
+                       .on_change(Box::new(|s| msg!(HelloEvent::TextBox {
+                           name: "textbox".to_string(),
+                           value: s.to_string(),
+                           update_type: "change".to_string(),
+                       })))
+                       .on_commit(Box::new(|s| msg!(HelloEvent::TextBox {
+                           name: "textbox".to_string(),
+                           value: s.to_string(),
+                           update_type: "commit".to_string(),
+                       }))),
+                   [size: [300, 30]])),
         )
     }
 
@@ -149,11 +156,12 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let window_opts = WindowOptions {
-        height: 480 as u32,
-        width: 480 as u32,
+        height: 300 as u32,
+        width: 350 as u32,
         scale_factor: 1.0,
     };
 
+    let (layer_tx, layer_rx) = calloop::channel::channel();
     let (mut app, mut event_loop, ..) =
         mctk_smithay::layer_window::LayerWindow::open_blocking::<App, AppMessage>(
             LayerWindowParams {
@@ -164,6 +172,8 @@ async fn main() -> anyhow::Result<()> {
                 assets,
                 svgs,
                 layer_shell_opts,
+                layer_tx,
+                layer_rx,
             },
             None,
         );
@@ -176,4 +186,13 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-impl RootComponent<AppMessage> for App {}
+impl RootComponent<AppMessage> for App {
+    fn root(&mut self, w: &dyn std::any::Any, app_channel: Option<Sender<AppMessage>>) {
+        println!("root initialized");
+        // let layer_window = w.downcast_ref::<LayerWindow>();
+        // if layer_window.is_some() {
+        //     self.state_mut().window_sender = Some(layer_window.unwrap().sender());
+        // }
+        self.state_mut().app_channel = app_channel.clone();
+    }
+}
