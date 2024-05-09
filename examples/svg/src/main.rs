@@ -1,14 +1,14 @@
 use mctk_core::component::{Component, Message, RootComponent};
 use mctk_core::layout::Alignment;
 use mctk_core::reexports::cosmic_text;
-use mctk_core::widgets::{self, Button, Image, Svg};
-use mctk_core::{lay, msg, size, size_pct, txt, AssetParams, Color};
+use mctk_core::widgets::{self, Svg};
+use mctk_core::{lay, size, size_pct, AssetParams, Color};
 use mctk_core::{node, node::Node};
 use mctk_macros::{component, state_component_impl};
-use mctk_smithay::layer_surface::LayerOptions;
-use mctk_smithay::layer_window::LayerWindowParams;
+use mctk_smithay::layer_shell::layer_surface::LayerOptions;
+use mctk_smithay::layer_shell::layer_window;
+use mctk_smithay::layer_shell::layer_window::LayerWindowParams;
 use mctk_smithay::WindowOptions;
-use smithay_client_toolkit::reexports::calloop;
 use smithay_client_toolkit::shell::wlr_layer;
 use std::collections::HashMap;
 use tracing_subscriber::EnvFilter;
@@ -170,20 +170,19 @@ async fn main() -> anyhow::Result<()> {
         scale_factor: 1.0,
     };
 
-    let (mut app, mut event_loop, ..) =
-        mctk_smithay::layer_window::LayerWindow::open_blocking::<App, AppMessage>(
-            LayerWindowParams {
-                title: "Hello scroll!".to_string(),
-                namespace,
-                window_opts,
-                fonts,
-                assets,
-                svgs,
-                layer_shell_opts,
-                ..Default::default()
-            },
-            None,
-        );
+    let (mut app, mut event_loop, ..) = layer_window::LayerWindow::open_blocking::<App, AppMessage>(
+        LayerWindowParams {
+            title: "Hello scroll!".to_string(),
+            namespace,
+            window_opts,
+            fonts,
+            assets,
+            svgs,
+            layer_shell_opts,
+            ..Default::default()
+        },
+        None,
+    );
 
     // event_loop
     // .run(None, &mut app, |_| {

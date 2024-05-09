@@ -14,9 +14,11 @@ use smithay_client_toolkit::reexports::calloop::channel::{Channel, Event, Sender
 use smithay_client_toolkit::reexports::calloop::{self, EventLoop};
 use std::collections::HashMap;
 
-use crate::keyboard::{keysym_to_key, KeyboardEvent};
-use crate::touch::TouchEvent;
-use crate::{layer_surface, pointer, WindowEvent, WindowMessage, WindowOptions};
+use crate::input::keyboard::{keysym_to_key, KeyboardEvent};
+use crate::input::touch::TouchEvent;
+use crate::{
+    input::pointer, layer_shell::layer_surface, WindowEvent, WindowMessage, WindowOptions,
+};
 
 pub struct LayerWindow {
     width: u32,

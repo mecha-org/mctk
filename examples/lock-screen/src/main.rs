@@ -6,7 +6,7 @@ use mctk_core::widgets::Button;
 use mctk_core::{lay, msg, size, txt, AssetParams, Color};
 use mctk_core::{node, node::Node};
 use mctk_macros::{component, state_component_impl};
-use mctk_smithay::lock_window::SessionLockWindowParams;
+use mctk_smithay::session_lock::lock_window::{self, SessionLockWindowParams};
 use mctk_smithay::WindowOptions;
 use smithay_client_toolkit::reexports::calloop;
 use std::collections::HashMap;
@@ -103,7 +103,7 @@ async fn main() -> anyhow::Result<()> {
     let (session_lock_tx, session_lock_rx) = calloop::channel::channel();
 
     let (mut app, mut event_loop, ..) =
-        mctk_smithay::lock_window::SessionLockWindow::open_blocking::<App, AppMessage>(
+        lock_window::SessionLockWindow::open_blocking::<App, AppMessage>(
             SessionLockWindowParams {
                 window_opts,
                 fonts,
