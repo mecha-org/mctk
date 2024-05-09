@@ -7,6 +7,7 @@ use mctk_core::{node, node::Node};
 use mctk_smithay::layer_surface::LayerOptions;
 use mctk_smithay::layer_window::LayerWindowParams;
 use mctk_smithay::WindowOptions;
+use smithay_client_toolkit::reexports::calloop;
 use smithay_client_toolkit::shell::wlr_layer;
 use std::collections::HashMap;
 use std::time::Duration;
@@ -148,6 +149,7 @@ async fn main() -> anyhow::Result<()> {
                 assets,
                 svgs,
                 layer_shell_opts,
+                ..Default::default()
             },
             None,
         );

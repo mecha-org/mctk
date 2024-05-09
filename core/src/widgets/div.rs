@@ -377,6 +377,7 @@ impl Component for Div {
         if let (Some(color), Some(width), Some(radius)) =
             (self.border_color, self.border_width, self.radius)
         {
+            println!("rendering div 3");
             let rect_instance = InstanceBuilder::default()
                 .pos(context.aabb.pos)
                 .scale(context.aabb.size())

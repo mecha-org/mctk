@@ -23,6 +23,7 @@ pub struct PhysicalPosition<P> {
     pub y: P,
 }
 
+#[derive(Default)]
 pub struct WindowOptions {
     pub height: u32,
     pub width: u32,

@@ -1,5 +1,6 @@
 use crate::{
     keyboard::KeyboardEvent,
+    layer_window::LayerWindowMessage,
     new_raw_wayland_handle,
     pointer::{convert_button, MouseEvent, Point, ScrollDelta},
     touch::{Position, TouchEvent, TouchPoint},
@@ -13,7 +14,11 @@ use smithay_client_toolkit::{
     delegate_registry, delegate_seat, delegate_touch,
     output::{OutputHandler, OutputState},
     reexports::{
-        calloop::{channel::Sender, EventLoop},
+        calloop::{
+            self,
+            channel::{Channel, Sender},
+            EventLoop,
+        },
         calloop_wayland_source::WaylandSource,
         client::{
             globals::registry_queue_init,
@@ -74,11 +79,24 @@ pub struct LayerOptions {
     pub zone: i32,
 }
 
+impl Default for LayerOptions {
+    fn default() -> Self {
+        Self {
+            anchor: wlr_layer::Anchor::TOP,
+            layer: wlr_layer::Layer::Top,
+            keyboard_interactivity: Default::default(),
+            namespace: Default::default(),
+            zone: Default::default(),
+        }
+    }
+}
+
 impl LayerShellSctkWindow {
     pub fn new(
         window_tx: Sender<WindowMessage>,
         window_opts: WindowOptions,
         layer_opts: LayerOptions,
+        layer_rx: Option<Channel<LayerWindowMessage>>,
     ) -> anyhow::Result<(Self, EventLoop<'static, Self>)> {
         let conn = Connection::connect_to_env().expect("failed to connect to wayland");
         let wl_display = conn.display();
@@ -124,6 +142,22 @@ impl LayerShellSctkWindow {
 
         layer.commit();
 
+        if layer_rx.is_some() {
+            // insert source for layer_rx messages
+            let _ = loop_handle.insert_source(layer_rx.unwrap(), move |event, _, state| {
+                let _ = match event {
+                    calloop::channel::Event::Msg(msg) => {
+                        match msg {
+                            LayerWindowMessage::ReconfigureLayerOpts { opts } => {
+                                state.update_layer_opts(opts);
+                            }
+                        };
+                    }
+                    calloop::channel::Event::Closed => {}
+                };
+            });
+        }
+
         let state = LayerShellSctkWindow {
             // app,
             window_tx,
@@ -150,25 +184,6 @@ impl LayerShellSctkWindow {
 
         Ok((state, event_loop))
     }
-
-    // pub fn draw(&mut self, queue_handle: &QueueHandle<Self>, surface: &WlSurface) {
-    //     if self.layer.wl_surface() != surface {
-    //         return;
-    //     }
-
-    //     // for continous rendering
-    //     self.send_redraw_requested();
-
-    //     self.layer
-    //         .wl_surface()
-    //         .damage_buffer(0, 0, self.width as i32, self.height as i32);
-
-    //     self.layer
-    //         .wl_surface()
-    //         .frame(queue_handle, self.layer.wl_surface().clone());
-
-    //     self.layer.commit();
-    // }
 
     pub fn send_main_events_cleared(&mut self) {
         let _ = &self.window_tx.send(WindowMessage::MainEventsCleared);
@@ -197,12 +212,19 @@ impl LayerShellSctkWindow {
         });
     }
 
-    pub fn resize(&mut self, width: u32, height: u32, layer_opts: LayerOptions) {
+    pub fn resize(&mut self, width: u32, height: u32) {
+        let layer = &mut self.layer;
+
+        layer.set_size(width, height);
+
+        layer.commit();
+    }
+
+    pub fn update_layer_opts(&mut self, layer_opts: LayerOptions) {
         let layer = &mut self.layer;
 
         // set layer shell props
         layer.set_keyboard_interactivity(layer_opts.keyboard_interactivity);
-        layer.set_size(width, height);
         layer.set_anchor(layer_opts.anchor);
         layer.set_exclusive_zone(layer_opts.zone);
 

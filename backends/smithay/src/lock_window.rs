@@ -108,7 +108,12 @@ impl SessionLockWindow {
                             WindowMessage::Send { message } => {
                                 ui.update(message);
                             }
-                            WindowMessage::Resize { width, height } => {}
+                            WindowMessage::Resize {
+                                height: _,
+                                width: _,
+                            } => {
+                                // you cannot resize lock screen
+                            }
                             WindowMessage::MainEventsCleared => {
                                 ui.draw();
                                 ui.render();

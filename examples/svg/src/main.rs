@@ -8,6 +8,7 @@ use mctk_macros::{component, state_component_impl};
 use mctk_smithay::layer_surface::LayerOptions;
 use mctk_smithay::layer_window::LayerWindowParams;
 use mctk_smithay::WindowOptions;
+use smithay_client_toolkit::reexports::calloop;
 use smithay_client_toolkit::shell::wlr_layer;
 use std::collections::HashMap;
 use tracing_subscriber::EnvFilter;
@@ -179,6 +180,7 @@ async fn main() -> anyhow::Result<()> {
                 assets,
                 svgs,
                 layer_shell_opts,
+                ..Default::default()
             },
             None,
         );
