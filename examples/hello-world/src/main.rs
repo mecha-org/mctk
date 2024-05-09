@@ -7,7 +7,7 @@ use mctk_core::reexports::cosmic_text;
 use mctk_core::renderables::{types, Renderable};
 use mctk_core::style::Styled;
 use mctk_core::widgets::{self, Button, Div, TextBox};
-use mctk_core::{lay, msg, rect, size, txt, Color};
+use mctk_core::{lay, msg, rect, size, txt, AssetParams, Color};
 use mctk_core::{node, node::Node};
 use mctk_macros::{component, state_component_impl};
 use mctk_smithay::layer_surface::LayerOptions;
@@ -125,7 +125,7 @@ async fn main() -> anyhow::Result<()> {
     //     .init();
 
     // let mut fonts: Vec<String> = Vec::new();
-    let assets: HashMap<String, String> = HashMap::new();
+    let assets: HashMap<String, AssetParams> = HashMap::new();
     let mut svgs: HashMap<String, String> = HashMap::new();
 
     svgs.insert(

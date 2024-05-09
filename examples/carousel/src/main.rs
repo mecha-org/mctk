@@ -2,7 +2,7 @@ use mctk_core::component::{Component, RootComponent};
 use mctk_core::reexports::cosmic_text;
 use mctk_core::renderables::types;
 use mctk_core::widgets::{Carousel, Div};
-use mctk_core::{lay, size};
+use mctk_core::{lay, size, AssetParams};
 use mctk_core::{node, node::Node};
 use mctk_smithay::layer_surface::LayerOptions;
 use mctk_smithay::layer_window::LayerWindowParams;
@@ -109,9 +109,12 @@ async fn main() -> anyhow::Result<()> {
 
     fonts.load_font_data(include_bytes!("assets/fonts/SpaceGrotesk-Regular.ttf").into());
 
-    let mut assets: HashMap<String, String> = HashMap::new();
+    let mut assets: HashMap<String, AssetParams> = HashMap::new();
 
-    assets.insert("bg".to_string(), "src/assets/icons/bg.png".to_string());
+    assets.insert(
+        "bg".to_string(),
+        AssetParams::new("src/assets/icons/bg.png".to_string()),
+    );
 
     let mut svgs = HashMap::new();
     svgs.insert(
