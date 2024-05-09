@@ -161,7 +161,6 @@ async fn main() -> anyhow::Result<()> {
         scale_factor: 1.0,
     };
 
-    let (layer_tx, layer_rx) = calloop::channel::channel();
     let (mut app, mut event_loop, ..) =
         mctk_smithay::layer_window::LayerWindow::open_blocking::<App, AppMessage>(
             LayerWindowParams {
@@ -172,8 +171,7 @@ async fn main() -> anyhow::Result<()> {
                 assets,
                 svgs,
                 layer_shell_opts,
-                layer_tx,
-                layer_rx,
+                ..Default::default()
             },
             None,
         );
@@ -189,10 +187,6 @@ async fn main() -> anyhow::Result<()> {
 impl RootComponent<AppMessage> for App {
     fn root(&mut self, w: &dyn std::any::Any, app_channel: Option<Sender<AppMessage>>) {
         println!("root initialized");
-        // let layer_window = w.downcast_ref::<LayerWindow>();
-        // if layer_window.is_some() {
-        //     self.state_mut().window_sender = Some(layer_window.unwrap().sender());
-        // }
         self.state_mut().app_channel = app_channel.clone();
     }
 }

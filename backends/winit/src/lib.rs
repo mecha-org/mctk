@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use mctk_core::component::{Component, RootComponent};
 use mctk_core::input::{Button, Input, Motion, MouseButton};
 use mctk_core::reexports::cosmic_text;
+use mctk_core::reexports::smithay_client_toolkit::reexports::calloop::channel::Sender;
 use mctk_core::types::AssetParams;
 use mctk_core::types::PixelSize;
 use mctk_core::ui::UI;
@@ -19,21 +20,24 @@ use winit::{
 pub struct Window {
     winit_window: winit::window::Window,
     fonts: cosmic_text::fontdb::Database,
-    assets: HashMap<String, String>,
+    assets: HashMap<String, AssetParams>,
     svgs: HashMap<String, String>,
 }
 unsafe impl Send for Window {}
 unsafe impl Sync for Window {}
 
 impl Window {
-    pub fn open_blocking<A>(
+    pub fn open_blocking<A, B>(
         title: &str,
         width: u32,
         height: u32,
-        mut fonts: cosmic_text::fontdb::Database,
-        mut assets: Vec<(String, &'static [u8])>,
+        fonts: cosmic_text::fontdb::Database,
+        assets: HashMap<String, AssetParams>,
+        svgs: HashMap<String, String>,
+        app_channel: Option<Sender<B>>,
     ) where
-        A: 'static + RootComponent + Component + Default + Send + Sync,
+        A: 'static + RootComponent<B> + Component + Default + Send + Sync,
+        B: 'static,
     {
         let event_loop = EventLoop::new();
         let window = WindowBuilder::new()
@@ -41,12 +45,15 @@ impl Window {
             .with_inner_size(LogicalSize::new(width as f32, height as f32))
             .build(&event_loop)
             .unwrap();
-        let mut ui: UI<Window, A> = UI::new(Window {
-            winit_window: window,
-            fonts,
-            assets: HashMap::new(),
-            svgs: HashMap::new(),
-        });
+        let mut ui: UI<Window, A, B> = UI::new(
+            Window {
+                winit_window: window,
+                fonts,
+                assets,
+                svgs,
+            },
+            app_channel,
+        );
 
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Wait;

@@ -139,7 +139,6 @@ async fn main() -> anyhow::Result<()> {
         scale_factor: 1.0,
     };
 
-    let (layer_tx, layer_rx) = calloop::channel::channel();
     let (mut app, mut event_loop, ..) =
         mctk_smithay::layer_window::LayerWindow::open_blocking::<App, AppMessage>(
             LayerWindowParams {
@@ -150,8 +149,7 @@ async fn main() -> anyhow::Result<()> {
                 assets,
                 svgs,
                 layer_shell_opts,
-                layer_tx,
-                layer_rx,
+                ..Default::default()
             },
             None,
         );

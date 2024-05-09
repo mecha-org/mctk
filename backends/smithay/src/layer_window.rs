@@ -27,11 +27,12 @@ pub struct LayerWindow {
     fonts: cosmic_text::fontdb::Database,
     assets: HashMap<String, AssetParams>,
     svgs: HashMap<String, String>,
-    layer_tx: Sender<LayerWindowMessage>,
+    layer_tx: Option<Sender<LayerWindowMessage>>,
 }
 unsafe impl Send for LayerWindow {}
 unsafe impl Sync for LayerWindow {}
 
+#[derive(Default)]
 pub struct LayerWindowParams {
     pub title: String,
     pub namespace: String,
@@ -40,12 +41,14 @@ pub struct LayerWindowParams {
     pub assets: HashMap<String, AssetParams>,
     pub svgs: HashMap<String, String>,
     pub layer_shell_opts: LayerOptions,
-    pub layer_tx: Sender<LayerWindowMessage>,
-    pub layer_rx: Channel<LayerWindowMessage>,
+    pub layer_tx: Option<Sender<LayerWindowMessage>>,
+    pub layer_rx: Option<Channel<LayerWindowMessage>>,
 }
 
 #[derive(Debug)]
-pub enum LayerWindowMessage {}
+pub enum LayerWindowMessage {
+    ReconfigureLayerOpts { opts: LayerOptions },
+}
 
 impl LayerWindow {
     pub fn open_blocking<A, B>(
@@ -73,10 +76,9 @@ impl LayerWindow {
         } = params;
 
         let (window_tx, window_rx) = calloop::channel::channel();
-        let layer_shell_opts_2 = layer_shell_opts.clone();
 
         let (app_window, event_loop) =
-            LayerShellSctkWindow::new(window_tx.clone(), window_opts, layer_shell_opts)
+            LayerShellSctkWindow::new(window_tx.clone(), window_opts, layer_shell_opts, layer_rx)
                 .expect("failed to create application");
 
         // let (app_window, event_loop) =
@@ -119,8 +121,7 @@ impl LayerWindow {
                                 ui.update(message);
                             }
                             WindowMessage::Resize { width, height } => {
-                                let layer_shell = layer_shell_opts_2.clone();
-                                app_window.resize(width, height, layer_shell);
+                                app_window.resize(width, height);
                                 ui.resize(width, height);
                                 ui.draw();
                                 ui.render();
@@ -259,7 +260,7 @@ impl LayerWindow {
         (app_window, event_loop, window_tx.clone())
     }
 
-    pub fn sender(&self) -> Sender<LayerWindowMessage> {
+    pub fn sender(&self) -> Option<Sender<LayerWindowMessage>> {
         self.layer_tx.clone()
     }
 }
