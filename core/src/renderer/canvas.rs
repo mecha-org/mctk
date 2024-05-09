@@ -229,7 +229,7 @@ impl super::Renderer for CanvasRenderer {
                     circle.render(canvas);
                 }
                 Renderable::Image(image) => {
-                    image.render(canvas, &self.assets);
+                    image.render(canvas, &mut self.assets);
                 }
                 Renderable::Svg(svg) => {
                     svg.render(canvas, &mut self.svgs);

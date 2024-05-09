@@ -1,14 +1,19 @@
 use super::types::Canvas;
-use crate::{renderer::svg::SvgData, Pos, Scale};
+use crate::{
+    renderer::svg::{load_svg_path, SvgData},
+    Pos, Scale,
+};
 use derive_builder::Builder;
 use femtovg::Transform2D;
 use std::collections::HashMap;
+use usvg::fontdb::Database;
 
 #[derive(Clone, Debug, PartialEq, Builder)]
 pub struct Instance {
     pub name: String,
     pub pos: Pos,
     pub scale: Scale,
+    pub dynamic_load_from: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -23,12 +28,23 @@ impl Svg {
                 pos,
                 scale,
                 name: name.into(),
+                dynamic_load_from: None,
             },
         }
     }
 
     pub fn render(&self, canvas: &mut Canvas, svgs: &mut HashMap<String, SvgData>) {
-        let Instance { pos, scale, .. } = self.instance_data;
+        let Instance {
+            pos,
+            scale,
+            dynamic_load_from,
+            ..
+        } = self.instance_data.clone();
+
+        if svgs.get_mut(&self.instance_data.name).is_none() && dynamic_load_from.is_some() {
+            let svg_data = load_svg_path(dynamic_load_from.unwrap(), &Database::default());
+            svgs.insert(self.instance_data.name.clone(), svg_data);
+        }
 
         if svgs.get_mut(&self.instance_data.name).is_none() {
             println!("error: svg not found {:?}", self.instance_data.name);
@@ -79,5 +95,9 @@ impl Svg {
         }
 
         canvas.restore();
+    }
+
+    pub fn from_instance_data(instance_data: Instance) -> Self {
+        Self { instance_data }
     }
 }

@@ -85,28 +85,30 @@ pub fn load_svg_paths(svgs: HashMap<String, String>, fonts: Database) -> HashMap
     let mut loaded_svgs = HashMap::new();
 
     for (name, path) in svgs.into_iter() {
-        let svg_data = match std::fs::read(&path) {
-            Ok(file) => file,
-            Err(e) => {
-                println!("error {:?} path {:?}", e, path);
-                panic!("{:?}", e);
-            }
-        };
-
-        let tree = usvg::Tree::from_data(&svg_data, &usvg::Options::default(), &fonts).unwrap();
-        let width = tree.size().width() as f32;
-        let height = tree.size().height() as f32;
-
-        let paths: Vec<(Path, Option<Paint>, Option<Paint>, Transform)> =
-            render_nodes_to_paths(tree.root().children());
-        loaded_svgs.insert(
-            name,
-            SvgData {
-                paths,
-                scale: Scale { width, height },
-            },
-        );
+        let svg_data = load_svg_path(path, &fonts);
+        loaded_svgs.insert(name, svg_data);
     }
 
     loaded_svgs
+}
+
+pub fn load_svg_path(file_path: String, fonts: &Database) -> SvgData {
+    let svg_data = match std::fs::read(&file_path) {
+        Ok(file) => file,
+        Err(e) => {
+            println!("error {:?} path {:?}", e, file_path);
+            panic!("{:?}", e);
+        }
+    };
+
+    let tree = usvg::Tree::from_data(&svg_data, &usvg::Options::default(), &fonts).unwrap();
+    let width = tree.size().width() as f32;
+    let height = tree.size().height() as f32;
+
+    let paths: Vec<(Path, Option<Paint>, Option<Paint>, Transform)> =
+        render_nodes_to_paths(tree.root().children());
+    SvgData {
+        paths,
+        scale: Scale { width, height },
+    }
 }

@@ -5,7 +5,7 @@ use crate::{Pos, Scale};
 use super::types;
 use super::types::Canvas;
 use derive_builder::Builder;
-use femtovg::{CompositeOperation, ImageId, Paint, Path};
+use femtovg::{CompositeOperation, ImageFlags, ImageId, Paint, Path};
 
 type Point = types::Point<f32>;
 type Size = types::Size<f32>;
@@ -19,6 +19,8 @@ pub struct Instance {
     pub composite_operation: CompositeOperation,
     #[builder(default = "0.0")]
     pub radius: f32,
+    #[builder(default = "None")]
+    pub dynamic_load_from: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -35,6 +37,7 @@ impl Image {
                 name: name.into(),
                 composite_operation: CompositeOperation::SourceOver,
                 radius: Default::default(),
+                dynamic_load_from: Default::default(),
             },
         }
     }
@@ -44,16 +47,26 @@ impl Image {
         self
     }
 
-    pub fn render(&self, canvas: &mut Canvas, assets: &HashMap<String, ImageId>) {
+    pub fn render(&self, canvas: &mut Canvas, assets: &mut HashMap<String, ImageId>) {
         let Instance {
             pos,
             scale,
             composite_operation,
             radius,
+            dynamic_load_from,
             ..
-        } = self.instance_data;
+        } = self.instance_data.clone();
 
         canvas.global_composite_operation(composite_operation);
+
+        //Load image dynamically
+        if assets.get(&self.instance_data.name).is_none() && dynamic_load_from.is_some() {
+            let path = dynamic_load_from.unwrap();
+            let image_load_r = canvas.load_image_file(path, ImageFlags::empty());
+            if let Ok(image_id) = image_load_r {
+                assets.insert(self.instance_data.name.clone(), image_id);
+            }
+        }
 
         if let Some(image_id) = assets.get(&self.instance_data.name) {
             let Pos { x, y, z } = pos;
