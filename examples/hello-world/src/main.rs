@@ -1,22 +1,17 @@
-use std::collections::HashMap;
-use std::time::Duration;
-// mod counter;
 use mctk_core::component::{Component, Message, RenderContext, RootComponent};
 use mctk_core::layout::Direction;
 use mctk_core::reexports::cosmic_text;
-use mctk_core::renderables::{types, Renderable};
+use mctk_core::renderables::Renderable;
 use mctk_core::style::Styled;
-use mctk_core::widgets::{self, Button, Div, TextBox};
+use mctk_core::widgets::{Button, Div, TextBox};
 use mctk_core::{lay, msg, rect, size, size_pct, txt, AssetParams, Color};
 use mctk_core::{node, node::Node};
 use mctk_macros::{component, state_component_impl};
-use mctk_smithay::layer_surface::LayerOptions;
-use mctk_smithay::layer_window::{LayerWindow, LayerWindowMessage, LayerWindowParams};
+use mctk_smithay::xdg_shell::xdg_window::{self, XdgWindowMessage, XdgWindowParams};
 use mctk_smithay::WindowOptions;
-use smithay_client_toolkit::reexports::calloop;
 use smithay_client_toolkit::reexports::calloop::channel::Sender;
-use smithay_client_toolkit::shell::wlr_layer;
-// use tracing_subscriber::EnvFilter;
+use std::collections::HashMap;
+use std::time::Duration;
 
 // App level channel
 #[derive(Debug)]
@@ -26,7 +21,7 @@ pub enum AppMessage {}
 pub struct AppState {
     value: f32,
     btn_pressed: bool,
-    window_sender: Option<Sender<LayerWindowMessage>>,
+    window_sender: Option<Sender<XdgWindowMessage>>,
     app_channel: Option<Sender<AppMessage>>,
 }
 
@@ -145,36 +140,23 @@ async fn main() -> anyhow::Result<()> {
 
     fonts.load_font_data(include_bytes!("assets/fonts/SpaceGrotesk-Regular.ttf").into());
 
-    let namespace = "mctk.layer_shell.demo".to_string();
-
-    let layer_shell_opts = LayerOptions {
-        anchor: wlr_layer::Anchor::TOP | wlr_layer::Anchor::LEFT | wlr_layer::Anchor::RIGHT,
-        layer: wlr_layer::Layer::Overlay,
-        keyboard_interactivity: wlr_layer::KeyboardInteractivity::Exclusive,
-        namespace: Some(namespace.clone()),
-        zone: 0,
-    };
-
     let window_opts = WindowOptions {
         height: 300 as u32,
         width: 350 as u32,
         scale_factor: 1.0,
     };
 
-    let (mut app, mut event_loop, ..) =
-        mctk_smithay::layer_window::LayerWindow::open_blocking::<App, AppMessage>(
-            LayerWindowParams {
-                title: "Hello world!".to_string(),
-                namespace,
-                window_opts,
-                fonts,
-                assets,
-                svgs,
-                layer_shell_opts,
-                ..Default::default()
-            },
-            None,
-        );
+    let (mut app, mut event_loop, ..) = xdg_window::XdgWindow::open_blocking::<App, AppMessage>(
+        XdgWindowParams {
+            title: "Hello world!".to_string(),
+            window_opts,
+            fonts,
+            assets,
+            svgs,
+            ..Default::default()
+        },
+        None,
+    );
     loop {
         event_loop
             .dispatch(Duration::from_millis(16), &mut app)

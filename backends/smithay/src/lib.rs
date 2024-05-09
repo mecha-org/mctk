@@ -1,19 +1,16 @@
-mod keyboard;
-pub mod layer_surface;
-pub mod layer_window;
-pub mod lock_surface;
-pub mod lock_window;
-mod pointer;
-mod touch;
+pub mod input;
+pub mod layer_shell;
+pub mod session_lock;
+pub mod xdg_shell;
 
-use keyboard::KeyboardEvent;
+use input::keyboard::KeyboardEvent;
+use input::pointer::MouseEvent;
+use input::touch::TouchEvent;
 use mctk_core::component;
 use mctk_core::raw_handle::RawWaylandHandle;
-use pointer::MouseEvent;
 use raw_window_handle::{
     RawDisplayHandle, RawWindowHandle, WaylandDisplayHandle, WaylandWindowHandle,
 };
-use touch::TouchEvent;
 use wayland_client::protocol::wl_display::WlDisplay;
 use wayland_client::protocol::wl_surface::WlSurface;
 use wayland_client::Proxy;

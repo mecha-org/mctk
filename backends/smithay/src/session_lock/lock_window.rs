@@ -12,10 +12,10 @@ use smithay_client_toolkit::reexports::calloop::channel::{Channel, Event, Sender
 use smithay_client_toolkit::reexports::calloop::{self, EventLoop};
 use std::collections::HashMap;
 
-use crate::keyboard::{keysym_to_key, KeyboardEvent};
-use crate::lock_surface::SessionLockSctkWindow;
-use crate::touch::TouchEvent;
-use crate::{pointer, WindowEvent, WindowMessage, WindowOptions};
+use crate::input::keyboard::{keysym_to_key, KeyboardEvent};
+use crate::input::touch::TouchEvent;
+use crate::session_lock::lock_surface::SessionLockSctkWindow;
+use crate::{input::pointer, WindowEvent, WindowMessage, WindowOptions};
 
 pub struct SessionLockWindow {
     width: u32,
