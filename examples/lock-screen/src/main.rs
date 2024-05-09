@@ -3,7 +3,7 @@ use mctk_core::reexports::cosmic_text;
 use mctk_core::renderables::{types, Renderable};
 use mctk_core::style::Styled;
 use mctk_core::widgets::Button;
-use mctk_core::{lay, msg, size, txt, Color};
+use mctk_core::{lay, msg, size, txt, AssetParams, Color};
 use mctk_core::{node, node::Node};
 use mctk_macros::{component, state_component_impl};
 use mctk_smithay::lock_window::SessionLockWindowParams;
@@ -86,7 +86,7 @@ async fn main() -> anyhow::Result<()> {
         .with_env_filter(env_filter)
         .init();
 
-    let assets: HashMap<String, String> = HashMap::new();
+    let assets: HashMap<String, AssetParams> = HashMap::new();
     let svgs: HashMap<String, String> = HashMap::new();
 
     let mut fonts = cosmic_text::fontdb::Database::new();

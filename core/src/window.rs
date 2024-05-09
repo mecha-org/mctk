@@ -1,6 +1,7 @@
 use crate::{
     raw_handle::RawWaylandHandle,
     types::{Data, PixelSize},
+    AssetParams,
 };
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
 use std::{any::Any, collections::HashMap};
@@ -59,7 +60,7 @@ pub trait Window: HasRawWindowHandle + HasRawDisplayHandle + Send + Sync + Any {
     fn fonts(&self) -> cosmic_text::fontdb::Database;
 
     // For assets
-    fn assets(&self) -> HashMap<String, String>;
+    fn assets(&self) -> HashMap<String, AssetParams>;
 
     // For svgs
     fn svgs(&self) -> HashMap<String, String>;

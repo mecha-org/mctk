@@ -906,3 +906,27 @@ mod tests {
         assert_eq!(c, Into::<Color>::into(Into::<u32>::into(c)))
     }
 }
+
+#[derive(Debug, Clone, Default)]
+pub enum ImgFilter {
+    #[default]
+    RGB,
+    GRAY,
+}
+
+#[derive(Debug, Clone)]
+pub struct AssetParams {
+    pub path: String,
+    pub filter: ImgFilter,
+    pub blur: Option<f32>,
+}
+
+impl AssetParams {
+    pub fn new(path: String) -> Self {
+        Self {
+            path,
+            filter: ImgFilter::default(),
+            blur: None,
+        }
+    }
+}
