@@ -7,7 +7,7 @@ use mctk_core::{node, node::Node};
 use mctk_smithay::layer_shell::layer_surface::LayerOptions;
 use mctk_smithay::layer_shell::layer_window;
 use mctk_smithay::layer_shell::layer_window::LayerWindowParams;
-use mctk_smithay::WindowOptions;
+use mctk_smithay::{WindowInfo, WindowOptions};
 use smithay_client_toolkit::shell::wlr_layer;
 use std::collections::HashMap;
 use std::time::Duration;
@@ -121,7 +121,7 @@ async fn main() -> anyhow::Result<()> {
         "src/assets/icons/battery.svg".to_string(),
     );
 
-    let namespace = "mctk.layer_shell.demo".to_string();
+    let namespace = "mctk.examples.carousel".to_string();
 
     let layer_shell_opts = LayerOptions {
         anchor: wlr_layer::Anchor::TOP | wlr_layer::Anchor::LEFT | wlr_layer::Anchor::RIGHT,
@@ -129,6 +129,12 @@ async fn main() -> anyhow::Result<()> {
         keyboard_interactivity: wlr_layer::KeyboardInteractivity::Exclusive,
         namespace: Some(namespace.clone()),
         zone: 0,
+    };
+
+    let window_info = WindowInfo {
+        id: "mctk.examples.carousel".to_string(),
+        title: "Carousel".to_string(),
+        namespace,
     };
 
     let window_opts = WindowOptions {
@@ -139,8 +145,7 @@ async fn main() -> anyhow::Result<()> {
 
     let (mut app, mut event_loop, ..) = layer_window::LayerWindow::open_blocking::<App, AppMessage>(
         LayerWindowParams {
-            title: "Hello scroll!".to_string(),
-            namespace,
+            window_info,
             window_opts,
             fonts,
             assets,

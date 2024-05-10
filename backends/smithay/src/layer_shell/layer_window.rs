@@ -16,6 +16,7 @@ use std::collections::HashMap;
 
 use crate::input::keyboard::{keysym_to_key, KeyboardEvent};
 use crate::input::touch::TouchEvent;
+use crate::WindowInfo;
 use crate::{
     input::pointer, layer_shell::layer_surface, WindowEvent, WindowMessage, WindowOptions,
 };
@@ -36,8 +37,7 @@ unsafe impl Sync for LayerWindow {}
 
 #[derive(Default)]
 pub struct LayerWindowParams {
-    pub title: String,
-    pub namespace: String,
+    pub window_info: WindowInfo,
     pub window_opts: WindowOptions,
     pub fonts: cosmic_text::fontdb::Database,
     pub assets: HashMap<String, AssetParams>,
@@ -66,8 +66,7 @@ impl LayerWindow {
         B: 'static,
     {
         let LayerWindowParams {
-            title,
-            namespace,
+            window_info,
             window_opts,
             fonts,
             assets,
@@ -79,9 +78,14 @@ impl LayerWindow {
 
         let (window_tx, window_rx) = calloop::channel::channel();
 
-        let (app_window, event_loop) =
-            LayerShellSctkWindow::new(window_tx.clone(), window_opts, layer_shell_opts, layer_rx)
-                .expect("failed to create application");
+        let (app_window, event_loop) = LayerShellSctkWindow::new(
+            window_tx.clone(),
+            window_opts,
+            window_info,
+            layer_shell_opts,
+            layer_rx,
+        )
+        .expect("failed to create application");
 
         // let (app_window, event_loop) =
         //     SessionLockWindow::new(window_tx.clone(), window_opts)
