@@ -8,7 +8,7 @@ use mctk_core::{lay, msg, rect, size, size_pct, txt, AssetParams, Color};
 use mctk_core::{node, node::Node};
 use mctk_macros::{component, state_component_impl};
 use mctk_smithay::xdg_shell::xdg_window::{self, XdgWindowMessage, XdgWindowParams};
-use mctk_smithay::WindowOptions;
+use mctk_smithay::{WindowInfo, WindowOptions};
 use smithay_client_toolkit::reexports::calloop::channel::Sender;
 use std::collections::HashMap;
 use std::time::Duration;
@@ -146,9 +146,15 @@ async fn main() -> anyhow::Result<()> {
         scale_factor: 1.0,
     };
 
+    let window_info = WindowInfo {
+        id: "mctk.examples.hello-world".to_string(),
+        title: "Hello world!".to_string(),
+        namespace: "mctk.examples.hello-world".to_string(),
+    };
+
     let (mut app, mut event_loop, ..) = xdg_window::XdgWindow::open_blocking::<App, AppMessage>(
         XdgWindowParams {
-            title: "Hello world!".to_string(),
+            window_info,
             window_opts,
             fonts,
             assets,

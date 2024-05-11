@@ -20,11 +20,18 @@ pub struct PhysicalPosition<P> {
     pub y: P,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct WindowOptions {
     pub height: u32,
     pub width: u32,
     pub scale_factor: f32,
+}
+
+#[derive(Default, Clone)]
+pub struct WindowInfo {
+    pub id: String,
+    pub title: String,
+    pub namespace: String,
 }
 
 #[derive(Debug)]

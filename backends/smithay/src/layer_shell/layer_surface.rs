@@ -1,9 +1,11 @@
 use crate::{
-    input::keyboard::KeyboardEvent,
-    input::pointer::{convert_button, MouseEvent, Point, ScrollDelta},
-    input::touch::{Position, TouchEvent, TouchPoint},
+    input::{
+        keyboard::KeyboardEvent,
+        pointer::{convert_button, MouseEvent, Point, ScrollDelta},
+        touch::{Position, TouchEvent, TouchPoint},
+    },
     layer_shell::layer_window::LayerWindowMessage,
-    new_raw_wayland_handle, WindowEvent, WindowMessage, WindowOptions,
+    new_raw_wayland_handle, WindowEvent, WindowInfo, WindowMessage, WindowOptions,
 };
 use ahash::AHashMap;
 use anyhow::Context;
@@ -94,6 +96,7 @@ impl LayerShellSctkWindow {
     pub fn new(
         window_tx: Sender<WindowMessage>,
         window_opts: WindowOptions,
+        window_info: WindowInfo,
         layer_opts: LayerOptions,
         layer_rx: Option<Channel<LayerWindowMessage>>,
     ) -> anyhow::Result<(Self, EventLoop<'static, Self>)> {

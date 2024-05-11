@@ -8,7 +8,7 @@ use mctk_macros::{component, state_component_impl};
 use mctk_smithay::layer_shell::layer_surface::LayerOptions;
 use mctk_smithay::layer_shell::layer_window;
 use mctk_smithay::layer_shell::layer_window::LayerWindowParams;
-use mctk_smithay::WindowOptions;
+use mctk_smithay::{WindowInfo, WindowOptions};
 use smithay_client_toolkit::shell::wlr_layer;
 use std::collections::HashMap;
 use tracing_subscriber::EnvFilter;
@@ -170,10 +170,15 @@ async fn main() -> anyhow::Result<()> {
         scale_factor: 1.0,
     };
 
+    let window_info = WindowInfo {
+        id: "mctk.examples.svg".to_string(),
+        title: "Svg".to_string(),
+        namespace: "mctk.examples.svg".to_string(),
+    };
+
     let (mut app, mut event_loop, ..) = layer_window::LayerWindow::open_blocking::<App, AppMessage>(
         LayerWindowParams {
-            title: "Hello scroll!".to_string(),
-            namespace,
+            window_info,
             window_opts,
             fonts,
             assets,

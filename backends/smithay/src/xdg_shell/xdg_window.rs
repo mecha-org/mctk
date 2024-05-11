@@ -15,6 +15,7 @@ use std::collections::HashMap;
 
 use crate::input::keyboard::{keysym_to_key, KeyboardEvent};
 use crate::input::touch::TouchEvent;
+use crate::WindowInfo;
 use crate::{
     input::pointer, layer_shell::layer_surface, WindowEvent, WindowMessage, WindowOptions,
 };
@@ -37,8 +38,7 @@ unsafe impl Sync for XdgWindow {}
 
 #[derive(Default)]
 pub struct XdgWindowParams {
-    pub title: String,
-    pub namespace: String,
+    pub window_info: WindowInfo,
     pub window_opts: WindowOptions,
     pub fonts: cosmic_text::fontdb::Database,
     pub assets: HashMap<String, AssetParams>,
@@ -64,8 +64,7 @@ impl XdgWindow {
         B: 'static,
     {
         let XdgWindowParams {
-            title,
-            namespace,
+            window_info,
             window_opts,
             fonts,
             assets,
@@ -77,7 +76,7 @@ impl XdgWindow {
         let (window_tx, window_rx) = calloop::channel::channel();
 
         let (app_window, event_loop) =
-            XdgShellSctkWindow::new(window_tx.clone(), window_opts, xdg_window_rx)
+            XdgShellSctkWindow::new(window_tx.clone(), window_opts, window_info, xdg_window_rx)
                 .expect("failed to create application");
 
         // let (app_window, event_loop) =

@@ -1,8 +1,10 @@
 use crate::{
-    input::keyboard::KeyboardEvent,
-    input::pointer::{convert_button, MouseEvent, Point, ScrollDelta},
-    input::touch::{Position, TouchEvent, TouchPoint},
-    new_raw_wayland_handle, WindowEvent, WindowMessage, WindowOptions,
+    input::{
+        keyboard::KeyboardEvent,
+        pointer::{convert_button, MouseEvent, Point, ScrollDelta},
+        touch::{Position, TouchEvent, TouchPoint},
+    },
+    new_raw_wayland_handle, WindowEvent, WindowInfo, WindowMessage, WindowOptions,
 };
 use ahash::AHashMap;
 use anyhow::Context;
@@ -81,6 +83,7 @@ impl XdgShellSctkWindow {
     pub fn new(
         window_tx: Sender<WindowMessage>,
         window_opts: WindowOptions,
+        window_info: WindowInfo,
         xdg_window_rx: Option<Channel<XdgWindowMessage>>,
     ) -> anyhow::Result<(Self, EventLoop<'static, Self>)> {
         let conn = Connection::connect_to_env().expect("failed to connect to wayland");
@@ -91,6 +94,7 @@ impl XdgShellSctkWindow {
             width,
             scale_factor,
         } = window_opts;
+        let WindowInfo { id, title, .. } = window_info;
 
         let (globals, event_queue) =
             registry_queue_init::<Self>(&conn).context("failed to init registry queue")?;
@@ -116,9 +120,8 @@ impl XdgShellSctkWindow {
             xdg_shell.create_window(surface, WindowDecorations::RequestServer, &queue_handle);
 
         // set xdg shell props
-        let app_id = "mecha.org.mctk.xdg_window";
-        xdg_window.set_app_id(app_id);
-        xdg_window.set_title("MCTK");
+        xdg_window.set_app_id(id.clone());
+        xdg_window.set_title(title);
         xdg_window.set_min_size(Some((width, height)));
         xdg_window.commit();
 
@@ -129,7 +132,7 @@ impl XdgShellSctkWindow {
                 RequestData {
                     seat_and_serial: None,
                     surface: Some(xdg_window.wl_surface().clone()),
-                    app_id: Some(String::from(app_id)),
+                    app_id: Some(String::from(id.clone())),
                 },
             )
         }
