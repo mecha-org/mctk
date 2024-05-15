@@ -506,10 +506,6 @@ impl<T: EventInput> Event<T> {
 impl Event<Drag> {
     /// The distance dragged, in physical coordinates.
     pub fn physical_delta(&self) -> Point {
-        println!(
-            "Event::TouchDrag mouse_position {:?} start_pos {:?}",
-            self.mouse_position, self.input.start_pos
-        );
         self.mouse_position - self.input.start_pos
     }
 
@@ -532,10 +528,6 @@ impl Event<Drag> {
 impl Event<TouchDrag> {
     /// The distance dragged, in physical coordinates.
     pub fn physical_delta(&self) -> Point {
-        println!(
-            "Event::TouchDrag touch_position {:?} start_pos {:?}",
-            self.touch_position, self.input.start_pos
-        );
         self.touch_position - self.input.start_pos
     }
 
