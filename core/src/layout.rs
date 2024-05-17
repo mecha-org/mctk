@@ -930,6 +930,15 @@ impl super::node::Node {
             }
         }
 
+        if self.scrollable() {
+            children_size.width += Dimension::Px(
+                (self.component.spacing().width * (self.children.len() - 1) as f32).into(),
+            );
+            children_size.height += Dimension::Px(
+                (self.component.spacing().height * (self.children.len() - 1) as f32).into(),
+            );
+        }
+
         children_size
     }
 

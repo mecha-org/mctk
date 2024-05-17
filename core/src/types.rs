@@ -128,6 +128,24 @@ impl Add<f32> for Scale {
     }
 }
 
+impl Div<f32> for Scale {
+    type Output = Self;
+
+    fn div(self, factor: f32) -> Self::Output {
+        Scale {
+            width: self.width / factor,
+            height: self.height / factor,
+        }
+    }
+}
+
+impl AddAssign for Scale {
+    fn add_assign(&mut self, rhs: Self) {
+        self.width += rhs.width;
+        self.height += rhs.height;
+    }
+}
+
 impl From<[f32; 2]> for Scale {
     fn from(p: [f32; 2]) -> Self {
         unsafe { mem::transmute(p) }
