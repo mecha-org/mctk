@@ -198,6 +198,11 @@ pub trait Component: fmt::Debug {
         aabb
     }
 
+    /// Specifies spacing between its children
+    fn spacing(&self) -> Scale {
+        Scale::new(0.0, 0.0)
+    }
+
     // Event handlers
     /// Handle mouse click events. These events will only be sent if the mouse is over the Component.
     fn on_click(&mut self, _event: &mut Event<event::Click>) {}

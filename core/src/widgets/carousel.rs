@@ -15,9 +15,9 @@ pub struct CarouselItem {}
 
 #[derive(Debug, Default)]
 pub struct TransitionPositions {
-    from: Point,
-    to: Point,
-    velocity: f32,
+    pub from: Point,
+    pub to: Point,
+    pub velocity: f32,
 }
 
 #[derive(Debug, Default)]

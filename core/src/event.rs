@@ -506,10 +506,6 @@ impl<T: EventInput> Event<T> {
 impl Event<Drag> {
     /// The distance dragged, in physical coordinates.
     pub fn physical_delta(&self) -> Point {
-        println!(
-            "Event::TouchDrag mouse_position {:?} start_pos {:?}",
-            self.mouse_position, self.input.start_pos
-        );
         self.mouse_position - self.input.start_pos
     }
 
@@ -532,10 +528,6 @@ impl Event<Drag> {
 impl Event<TouchDrag> {
     /// The distance dragged, in physical coordinates.
     pub fn physical_delta(&self) -> Point {
-        println!(
-            "Event::TouchDrag touch_position {:?} start_pos {:?}",
-            self.touch_position, self.input.start_pos
-        );
         self.touch_position - self.input.start_pos
     }
 
@@ -569,6 +561,28 @@ impl Event<DragEnd> {
     /// The distance dragged, but clamped to the current Node's [`AABB`], in physical coordinates.
     pub fn bounded_physical_delta(&self) -> Point {
         self.mouse_position.clamp(self.current_physical_aabb()) - self.input.start_pos
+    }
+
+    /// The distance dragged, but clamped to the current Node's [`AABB`], in logical coordinates.
+    pub fn bounded_logical_delta(&self) -> Point {
+        self.bounded_physical_delta().unscale(self.scale_factor)
+    }
+}
+
+impl Event<TouchDragEnd> {
+    /// The distance dragged, in physical coordinates.
+    pub fn physical_delta(&self) -> Point {
+        self.touch_position - self.input.start_pos
+    }
+
+    /// The distance dragged, in logical coordinates.
+    pub fn logical_delta(&self) -> Point {
+        self.physical_delta().unscale(self.scale_factor)
+    }
+
+    /// The distance dragged, but clamped to the current Node's [`AABB`], in physical coordinates.
+    pub fn bounded_physical_delta(&self) -> Point {
+        self.touch_position.clamp(self.current_physical_aabb()) - self.input.start_pos
     }
 
     /// The distance dragged, but clamped to the current Node's [`AABB`], in logical coordinates.
