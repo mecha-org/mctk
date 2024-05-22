@@ -58,6 +58,7 @@ pub struct LayerShellSctkWindow {
     layer: LayerSurface,
     pub width: u32,
     pub height: u32,
+    pub is_exited: bool,
     keyboard: Option<wl_keyboard::WlKeyboard>,
     keyboard_focus: bool,
     keyboard_modifiers: Modifiers,
@@ -167,6 +168,7 @@ impl LayerShellSctkWindow {
             layer,
             width,
             height,
+            is_exited: false,
             keyboard: None,
             keyboard_focus: false,
             keyboard_modifiers: Modifiers::default(),
@@ -196,6 +198,10 @@ impl LayerShellSctkWindow {
 
     pub fn send_redraw_requested(&mut self) {
         let _ = &self.window_tx.send(WindowMessage::RedrawRequested);
+    }
+
+    pub fn close(&mut self) {
+        self.is_exited = true;
     }
 
     pub fn send_window_event(&mut self, event: WindowEvent) {
