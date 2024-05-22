@@ -59,12 +59,14 @@ use wayland_client::{
 };
 
 pub struct SessionLockSctkWindow {
+    conn: Connection,
     window_tx: Sender<WindowMessage>,
     registry_state: RegistryState,
     seat_state: SeatState,
     output_state: OutputState,
     pub width: u32,
     pub height: u32,
+    pub is_exited: bool,
     keyboard: Option<wl_keyboard::WlKeyboard>,
     keyboard_focus: bool,
     keyboard_modifiers: Modifiers,
@@ -103,7 +105,7 @@ impl SessionLockSctkWindow {
         let queue_handle = event_queue.handle();
 
         let loop_handle = event_loop.handle();
-        WaylandSource::new(conn.clone(), event_queue)
+        let _ = WaylandSource::new(conn.clone(), event_queue)
             .insert(loop_handle.clone())
             .expect("failed to insert wayland source into event loop");
 
@@ -147,8 +149,7 @@ impl SessionLockSctkWindow {
                 calloop::channel::Event::Msg(msg) => {
                     match msg {
                         SessionLockMessage::Unlock => {
-                            println!("window unlock");
-                            state.session_lock.unlock_and_destroy();
+                            state.unlock_and_destroy();
                         }
                     };
                 }
@@ -158,6 +159,7 @@ impl SessionLockSctkWindow {
 
         let state = SessionLockSctkWindow {
             // app,
+            conn,
             window_tx,
             registry_state: RegistryState::new(&globals),
             seat_state: SeatState::new(&globals, &queue_handle),
@@ -166,6 +168,7 @@ impl SessionLockSctkWindow {
             wl_surface,
             width,
             height,
+            is_exited: false,
             keyboard: None,
             keyboard_focus: false,
             keyboard_modifiers: Modifiers::default(),
@@ -187,10 +190,14 @@ impl SessionLockSctkWindow {
         let _ = &self.window_tx.send(WindowMessage::MainEventsCleared);
     }
 
-    pub fn send_close_requested(&mut self) {
+    pub fn send_close_requested(&self) {
         let _ = &self.window_tx.send(WindowMessage::WindowEvent {
             event: WindowEvent::CloseRequested,
         });
+    }
+
+    pub fn close(&mut self) {
+        self.is_exited = true;
     }
 
     pub fn send_redraw_requested(&mut self) {
@@ -208,6 +215,17 @@ impl SessionLockSctkWindow {
             height,
             wayland_handle,
         });
+    }
+
+    pub fn unlock_and_destroy(&mut self) {
+        self.session_lock.unlock_and_destroy();
+
+        // send roundtrip to wait for reply from server
+        // TODO handle faild
+        let _ = self.conn.roundtrip();
+
+        // close the client
+        self.close();
     }
 }
 
@@ -618,7 +636,6 @@ impl Dispatch<ExtSessionLockManagerV1, ()> for SessionLockSctkWindow {
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
-        println!("event::ext_session_lock_manager_v1 {:?}", event);
     }
 }
 

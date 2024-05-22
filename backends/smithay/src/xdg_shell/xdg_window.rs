@@ -138,6 +138,7 @@ impl XdgWindow {
                                 match w_ev {
                                     WindowEvent::CloseRequested => {
                                         ui.handle_input(&Input::Exit);
+                                        app_window.close();
                                     }
                                     WindowEvent::Focused => {
                                         ui.handle_input(&Input::Focus(true));
@@ -299,6 +300,12 @@ impl mctk_core::window::Window for XdgWindow {
     fn set_size(&mut self, width: u32, height: u32) {
         self.width = width;
         self.height = height;
+    }
+
+    fn exit(&mut self) {
+        let _ = self.window_tx.send(WindowMessage::WindowEvent {
+            event: WindowEvent::CloseRequested,
+        });
     }
 
     fn set_wayland_handle(&mut self, wayland_handle: RawWaylandHandle) {

@@ -143,6 +143,8 @@ impl mctk_core::window::Window for Window {
         self.winit_window.request_redraw();
     }
 
+    fn exit(&mut self) {}
+
     fn fonts(&self) -> cosmic_text::fontdb::Database {
         self.fonts.clone()
     }

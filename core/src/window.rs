@@ -68,6 +68,9 @@ pub trait Window: HasRawWindowHandle + HasRawDisplayHandle + Send + Sync + Any {
     // used to reconfigure size
     fn set_size(&mut self, width: u32, height: u32) {}
 
+    // trigger exit
+    fn exit(&mut self);
+
     // used to reconfigure wayland_handle
     fn set_wayland_handle(&mut self, wayland_handle: RawWaylandHandle) {}
 

@@ -6,9 +6,13 @@ use mctk_core::widgets::Button;
 use mctk_core::{lay, msg, size, txt, AssetParams, Color};
 use mctk_core::{node, node::Node};
 use mctk_macros::{component, state_component_impl};
-use mctk_smithay::session_lock::lock_window::{self, SessionLockWindowParams};
+use mctk_smithay::session_lock::lock_window::{
+    self, SessionLockMessage, SessionLockWindow, SessionLockWindowParams,
+};
 use mctk_smithay::WindowOptions;
 use smithay_client_toolkit::reexports::calloop;
+use smithay_client_toolkit::reexports::calloop::channel::Sender;
+use std::any::Any;
 use std::collections::HashMap;
 use std::time::Duration;
 use tracing_subscriber::EnvFilter;
@@ -20,11 +24,22 @@ pub enum AppMessage {}
 pub struct AppState {
     value: f32,
     btn_pressed: bool,
+    session_lock_sender: Option<Sender<SessionLockMessage>>,
 }
 
 #[derive(Debug, Clone)]
 enum HelloEvent {
     ButtonPressed { name: String },
+}
+
+fn unlock(session_lock_sender_op: Option<Sender<SessionLockMessage>>) -> anyhow::Result<bool> {
+    if let Some(session_lock_sender) = session_lock_sender_op {
+        let _ = session_lock_sender.send(SessionLockMessage::Unlock);
+        // std::process::exit(0);
+        return Ok(true);
+    }
+
+    Ok(false)
 }
 
 #[component(State = "AppState")]
@@ -37,6 +52,7 @@ impl Component for App {
         self.state = Some(AppState {
             value: 30.,
             btn_pressed: false,
+            session_lock_sender: None,
         })
     }
 
@@ -70,6 +86,7 @@ impl Component for App {
             Some(HelloEvent::ButtonPressed { name }) => {
                 println!("{}", name);
                 self.state_mut().btn_pressed = true;
+                let _ = unlock(self.state_ref().session_lock_sender.clone());
             }
             _ => (),
         }
@@ -118,9 +135,20 @@ async fn main() -> anyhow::Result<()> {
         event_loop
             .dispatch(Duration::from_millis(16), &mut app)
             .unwrap();
+
+        if app.is_exited {
+            break;
+        }
     }
 
     Ok(())
 }
 
-impl RootComponent<AppMessage> for App {}
+impl RootComponent<AppMessage> for App {
+    fn root(&mut self, w: &dyn Any, _: Option<Sender<AppMessage>>) {
+        let session_lock_window = w.downcast_ref::<SessionLockWindow>();
+        if session_lock_window.is_some() {
+            self.state_mut().session_lock_sender = Some(session_lock_window.unwrap().sender());
+        }
+    }
+}

@@ -128,6 +128,7 @@ impl SessionLockWindow {
                                 match w_ev {
                                     WindowEvent::CloseRequested => {
                                         ui.handle_input(&Input::Exit);
+                                        app_window.close();
                                     }
                                     WindowEvent::Focused => {
                                         ui.handle_input(&Input::Focus(true));
@@ -298,6 +299,12 @@ impl mctk_core::window::Window for SessionLockWindow {
 
     fn as_any(&self) -> &dyn std::any::Any {
         self
+    }
+
+    fn exit(&mut self) {
+        let _ = self.window_tx.send(WindowMessage::WindowEvent {
+            event: WindowEvent::CloseRequested,
+        });
     }
 }
 

@@ -68,6 +68,7 @@ pub struct XdgShellSctkWindow {
     xdg_activation: Option<ActivationState>,
     pub width: u32,
     pub height: u32,
+    pub is_exited: bool,
     keyboard: Option<wl_keyboard::WlKeyboard>,
     keyboard_focus: bool,
     keyboard_modifiers: Modifiers,
@@ -76,7 +77,6 @@ pub struct XdgShellSctkWindow {
     touch_map: AHashMap<i32, TouchPoint>,
     initial_configure_sent: bool,
     pub scale_factor: f32,
-    exit: bool,
 }
 
 impl XdgShellSctkWindow {
@@ -159,6 +159,7 @@ impl XdgShellSctkWindow {
             xdg_activation,
             width,
             height,
+            is_exited: false,
             keyboard: None,
             keyboard_focus: false,
             keyboard_modifiers: Modifiers::default(),
@@ -167,7 +168,6 @@ impl XdgShellSctkWindow {
             touch_map: AHashMap::new(),
             initial_configure_sent: false,
             scale_factor,
-            exit: false,
         };
 
         Ok((state, event_loop))
@@ -207,6 +207,10 @@ impl XdgShellSctkWindow {
         window.set_min_size(Some((width, height)));
 
         window.commit();
+    }
+
+    pub fn close(&mut self) {
+        self.is_exited = true;
     }
 }
 
@@ -268,7 +272,6 @@ impl OutputHandler for XdgShellSctkWindow {
 impl WindowHandler for XdgShellSctkWindow {
     fn request_close(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &Window) {
         let _ = self.send_close_requested();
-        self.exit = true;
     }
 
     fn configure(
