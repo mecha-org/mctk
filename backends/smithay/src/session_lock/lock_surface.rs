@@ -204,6 +204,10 @@ impl SessionLockSctkWindow {
         let _ = &self.window_tx.send(WindowMessage::RedrawRequested);
     }
 
+    pub fn send_compositor_frame(&mut self) {
+        let _ = &self.window_tx.send(WindowMessage::CompositorFrame);
+    }
+
     pub fn send_window_event(&mut self, event: WindowEvent) {
         let _ = &self.window_tx.send(WindowMessage::WindowEvent { event });
     }
@@ -250,7 +254,7 @@ impl CompositorHandler for SessionLockSctkWindow {
         if &self.wl_surface != surface {
             return;
         }
-        let _ = self.send_redraw_requested();
+        let _ = self.send_compositor_frame();
 
         self.wl_surface
             .damage_buffer(0, 0, self.width as i32, self.height as i32);

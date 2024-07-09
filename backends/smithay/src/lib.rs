@@ -41,6 +41,7 @@ pub enum WindowMessage {
         height: u32,
         wayland_handle: RawWaylandHandle,
     },
+    CompositorFrame,
     MainEventsCleared,
     RedrawRequested,
     Resize {

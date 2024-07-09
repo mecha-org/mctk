@@ -187,6 +187,10 @@ impl XdgShellSctkWindow {
         let _ = &self.window_tx.send(WindowMessage::RedrawRequested);
     }
 
+    pub fn send_compositor_frame(&mut self) {
+        let _ = &self.window_tx.send(WindowMessage::CompositorFrame);
+    }
+
     pub fn send_window_event(&mut self, event: WindowEvent) {
         let _ = &self.window_tx.send(WindowMessage::WindowEvent { event });
     }
@@ -235,7 +239,7 @@ impl CompositorHandler for XdgShellSctkWindow {
         if self.xdg_window.wl_surface() != surface {
             return;
         }
-        let _ = self.send_redraw_requested();
+        let _ = self.send_compositor_frame();
 
         self.xdg_window
             .wl_surface()
