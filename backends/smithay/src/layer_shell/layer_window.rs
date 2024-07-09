@@ -121,25 +121,25 @@ impl LayerWindow {
                             } => {
                                 ui.configure(width, height, wayland_handle);
                                 ui.draw();
-                                ui.render();
                             }
                             WindowMessage::Send { message } => {
                                 ui.update(message);
+                                ui.draw(); // TODO: make this conditional
                             }
                             WindowMessage::Resize { width, height } => {
                                 app_window.resize(width, height);
                                 ui.resize(width, height);
                                 ui.draw();
-                                ui.render();
                             }
                             WindowMessage::MainEventsCleared => {
                                 ui.draw();
-                                ui.render();
                             }
                             WindowMessage::RedrawRequested => {
-                                ui.handle_input(&Input::Timer);
-                                ui.draw();
+                                // ui.handle_input(&Input::Timer);
                                 ui.render();
+                            }
+                            WindowMessage::CompositorFrame => {
+                                ui.handle_input(&Input::Timer);
                             }
                             WindowMessage::WindowEvent { event: w_ev } => {
                                 // println!("window_event::{:?}", w_ev);

@@ -129,13 +129,16 @@ impl<W: 'static + Window, A: 'static + RootComponent<B> + Component + Default + 
                     {
                         // We need to lock the renderer while we modify the node, so that we don't try to render it while doing so
                         // Since this will cause a deadlock
-                        let mut renderer = renderer.write().unwrap();
+                        let renderer = renderer.write().unwrap();
 
                         if renderer.is_none() {
                             *node_dirty.write().unwrap() = true;
                             return;
                         }
+                    }
 
+                    let mut do_render = false;
+                    {
                         // We need to acquire a lock on the node once we `view` it, because we remove its state at this point
                         let mut old = node.write().unwrap();
                         inst("Node::view");
@@ -144,20 +147,26 @@ impl<W: 'static + Window, A: 'static + RootComponent<B> + Component + Default + 
                         *registrations.write().unwrap() = new_registrations;
                         inst_end();
 
-                        let caches = renderer.as_mut().unwrap().caches();
+                        let renderer = renderer.read().unwrap();
+                        let caches: crate::renderer::Caches = renderer.as_ref().unwrap().caches();
+
                         inst("Node::layout");
                         new.layout(&old, &mut caches.font.write().unwrap(), scale_factor);
                         inst_end();
 
                         inst("Node::render");
-                        let do_render = new.render(caches, Some(&mut old), scale_factor);
+                        do_render = new.render(caches, Some(&mut old), scale_factor);
                         inst_end();
 
                         *old = new;
-
+                    }
+                    {
                         if do_render {
-                            window.write().unwrap().redraw();
+                            let window = window.read();
+                            // println!("window::redraw start {:?}", do_render);
+                            window.unwrap().redraw();
                         }
+
                         *frame_dirty.write().unwrap() = true;
                     }
 
@@ -298,7 +307,7 @@ impl<W: 'static + Window, A: 'static + RootComponent<B> + Component + Default + 
     /// A draw will only occur if an event was handled that resulted in [`state_mut`][crate::state_component_impl] being called.
     pub fn draw(&mut self) {
         if self.draw_channel.is_some() {
-            self.draw_channel.as_ref().unwrap().send(()).unwrap();
+            let _ = self.draw_channel.as_ref().unwrap().send(());
         }
     }
 
@@ -313,16 +322,17 @@ impl<W: 'static + Window, A: 'static + RootComponent<B> + Component + Default + 
             inst("UI::render");
             // Pull out size so it gets pulled into the renderer lock
             let size = *self.physical_size.read().unwrap();
+
+            let node = &self.node.read().unwrap();
+
             let mut renderer = self.renderer.write().unwrap();
 
-            if (renderer.is_none()) {
+            if renderer.is_none() {
                 return;
             }
 
-            renderer
-                .as_mut()
-                .unwrap()
-                .render(&self.node.read().unwrap(), size);
+            renderer.as_mut().unwrap().render(node, size);
+
             *frame_dirty.write().unwrap() = false;
             // println!("rendered");
             inst_end();
@@ -354,6 +364,7 @@ impl<W: 'static + Window, A: 'static + RootComponent<B> + Component + Default + 
     fn handle_dirty_event<T: EventInput>(&mut self, event: &Event<T>) {
         if event.dirty {
             *self.node_dirty.write().unwrap() = true;
+            let _ = self.draw();
         }
     }
 
@@ -860,6 +871,9 @@ impl<W: 'static + Window, A: 'static + RootComponent<B> + Component + Default + 
             }
         }
         // clear_immediate_focus();
+
+        // send draw request, it will draw if node is dirty
+
         inst_end();
     }
 

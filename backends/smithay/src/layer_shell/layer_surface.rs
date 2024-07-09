@@ -52,6 +52,7 @@ use wayland_client::protocol::{
 };
 
 pub struct LayerShellSctkWindow {
+    // conn: Connection,
     window_tx: Sender<WindowMessage>,
     wl_display: WlDisplay,
     registry_state: RegistryState,
@@ -163,6 +164,7 @@ impl LayerShellSctkWindow {
 
         let state = LayerShellSctkWindow {
             // app,
+            // conn,
             window_tx,
             wl_display,
             registry_state: RegistryState::new(&globals),
@@ -197,6 +199,10 @@ impl LayerShellSctkWindow {
         let _ = &self.window_tx.send(WindowMessage::WindowEvent {
             event: WindowEvent::CloseRequested,
         });
+    }
+
+    pub fn send_compositor_frame(&mut self) {
+        let _ = &self.window_tx.send(WindowMessage::CompositorFrame);
     }
 
     pub fn send_redraw_requested(&mut self) {
@@ -261,7 +267,8 @@ impl CompositorHandler for LayerShellSctkWindow {
         if self.layer.wl_surface() != surface {
             return;
         }
-        let _ = self.send_redraw_requested();
+
+        let _ = self.send_compositor_frame();
 
         self.layer
             .wl_surface()
