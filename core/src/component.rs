@@ -268,5 +268,5 @@ pub trait Component: fmt::Debug {
 
 pub trait RootComponent<A> {
     // Called when a root node is first instantiated, this method will only be called for root components. This is called after state is init()
-    fn root(&mut self, window: &dyn Any, app_channel: Option<calloop::channel::Sender<A>>) {}
+    fn root(&mut self, window: &dyn Any, app_params: &dyn Any) {}
 }

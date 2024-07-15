@@ -16,6 +16,7 @@ use crate::{
 };
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use smithay_client_toolkit::reexports::calloop;
+use std::any::Any;
 use std::{
     cell::UnsafeCell,
     marker::PhantomData,
@@ -44,7 +45,7 @@ pub struct UI<W: Window, A: Component + Default + Send + Sync, B> {
     event_cache: EventCache,
     node_dirty: Arc<RwLock<bool>>,
     frame_dirty: Arc<RwLock<bool>>,
-    app_channel: Option<calloop::channel::Sender<B>>,
+    app_params: B,
 }
 
 thread_local!(
@@ -91,8 +92,11 @@ thread_local!(
 //     CURRENT_WINDOW.with(|r| unsafe { *r.get().as_mut().unwrap() = Some(window) })
 // }
 
-impl<W: 'static + Window, A: 'static + RootComponent<B> + Component + Default + Send + Sync, B>
-    UI<W, A, B>
+impl<
+        W: 'static + Window,
+        A: 'static + RootComponent<B> + Component + Default + Send + Sync,
+        B: 'static + Any + Clone,
+    > UI<W, A, B>
 {
     fn node_ref(&self) -> RwLockReadGuard<'_, Node> {
         self.node.read().unwrap()
@@ -177,7 +181,7 @@ impl<W: 'static + Window, A: 'static + RootComponent<B> + Component + Default + 
     }
 
     /// Create a new `UI`, given a [`Window`].
-    pub fn new(window: W, app_channel: Option<calloop::channel::Sender<B>>) -> Self {
+    pub fn new(window: W, app_params: B) -> Self {
         let scale_factor = Arc::new(RwLock::new(window.scale_factor()));
         // dbg!(scale_factor);
         let physical_size = Arc::new(RwLock::new(window.physical_size()));
@@ -189,7 +193,9 @@ impl<W: 'static + Window, A: 'static + RootComponent<B> + Component + Default + 
         inst("UI::new");
         let mut component = A::default();
         component.init();
-        component.root(window.as_any(), app_channel.clone());
+
+        let app_params = app_params.clone();
+        component.root(window.as_any(), &app_params);
 
         // let renderer = Arc::new(RwLock::new(Some(ActiveRenderer::new(&window))));
         let renderer = Arc::new(RwLock::new(None));
@@ -207,7 +213,7 @@ impl<W: 'static + Window, A: 'static + RootComponent<B> + Component + Default + 
         let registrations: Arc<RwLock<Vec<Registration>>> = Default::default();
 
         let n = Self {
-            app_channel,
+            app_params: app_params,
             renderer,
             // render_channel,
             // _render_thread: render_thread,

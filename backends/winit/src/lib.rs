@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::collections::HashMap;
 
 use mctk_core::component::{Component, RootComponent};
@@ -34,10 +35,10 @@ impl Window {
         fonts: cosmic_text::fontdb::Database,
         assets: HashMap<String, AssetParams>,
         svgs: HashMap<String, String>,
-        app_channel: Option<Sender<B>>,
+        app_params: B,
     ) where
         A: 'static + RootComponent<B> + Component + Default + Send + Sync,
-        B: 'static,
+        B: 'static + Any + Clone,
     {
         let event_loop = EventLoop::new();
         let window = WindowBuilder::new()
@@ -52,7 +53,7 @@ impl Window {
                 assets,
                 svgs,
             },
-            app_channel,
+            app_params,
         );
 
         event_loop.run(move |event, _, control_flow| {

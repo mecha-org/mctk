@@ -1,21 +1,37 @@
+use anyhow::Error;
 use mctk_core::component::{Component, Message, RenderContext, RootComponent};
 use mctk_core::layout::Direction;
 use mctk_core::reexports::cosmic_text;
+use mctk_core::reexports::smithay_client_toolkit::{
+    reexports::calloop::{self, channel::Event},
+    shell::wlr_layer,
+};
 use mctk_core::renderables::Renderable;
 use mctk_core::style::Styled;
 use mctk_core::widgets::{Button, Div, TextBox};
 use mctk_core::{lay, msg, rect, size, size_pct, txt, AssetParams, Color};
 use mctk_core::{node, node::Node};
 use mctk_macros::{component, state_component_impl};
+use mctk_smithay::layer_shell::layer_surface::LayerOptions;
+use mctk_smithay::layer_shell::layer_window::{LayerWindow, LayerWindowParams};
 use mctk_smithay::xdg_shell::xdg_window::{self, XdgWindowMessage, XdgWindowParams};
-use mctk_smithay::{WindowInfo, WindowOptions};
+use mctk_smithay::{WindowInfo, WindowMessage, WindowOptions};
 use smithay_client_toolkit::reexports::calloop::channel::Sender;
+use std::any::Any;
 use std::collections::HashMap;
 use std::time::Duration;
+use tokio::time;
 
 // App level channel
 #[derive(Debug)]
-pub enum AppMessage {}
+pub enum AppMessage {
+    Exit,
+}
+
+#[derive(Debug, Clone)]
+pub struct AppParams {
+    app_channel: Option<calloop::channel::Sender<AppMessage>>,
+}
 
 #[derive(Debug, Default)]
 pub struct AppState {
@@ -35,6 +51,7 @@ enum HelloEvent {
         value: String,
         update_type: String,
     },
+    Exit,
 }
 
 #[component(State = "AppState")]
@@ -68,10 +85,8 @@ impl Component for App {
                 ]
             )
             .push(node!(
-                Button::new(txt!("A!"))
-                    .on_click(Box::new(|| msg!(HelloEvent::ButtonPressed {
-                        name: "Clicked".to_string()
-                    })))
+                Button::new(txt!("Click"))
+                    .on_click(Box::new(|| msg!(HelloEvent::Exit)))
                     .on_double_click(Box::new(|| msg!(HelloEvent::ButtonPressed {
                         name: "Double clicked".to_string()
                     })))
@@ -80,27 +95,7 @@ impl Component for App {
                     .style("active_color", Color::rgb(200., 200., 200.))
                     .style("font_size", 24.0),
                 lay![size: size!(180.0, 180.0), margin: [0., 0., 20., 0.]]
-            ))
-            .push(node!(
-                   TextBox::new(Some("".to_string()))
-                       .style("background_color", Color::WHITE)
-                       .style("font_size", 16.)
-                       .style("text_color", Color::BLACK)
-                       .style("border_width", 0.)
-                       .style("cursor_color", Color::BLACK)
-                       .style("placeholder_color", Color::MID_GREY)
-                       .placeholder("Type here")
-                       .on_change(Box::new(|s| msg!(HelloEvent::TextBox {
-                           name: "textbox".to_string(),
-                           value: s.to_string(),
-                           update_type: "change".to_string(),
-                       })))
-                       .on_commit(Box::new(|s| msg!(HelloEvent::TextBox {
-                           name: "textbox".to_string(),
-                           value: s.to_string(),
-                           update_type: "commit".to_string(),
-                       }))),
-                   [size: [300, 30]])),
+            )),
         )
     }
 
@@ -111,6 +106,12 @@ impl Component for App {
                 println!("{}", name);
                 self.state_mut().btn_pressed = true;
             }
+            Some(HelloEvent::Exit) => {
+                println!("button clicked");
+                if let Some(app_channel) = &self.state_ref().app_channel {
+                    let _ = app_channel.send(AppMessage::Exit);
+                };
+            }
             _ => (),
         }
         vec![]
@@ -119,7 +120,28 @@ impl Component for App {
 
 // Layer Surface App
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() {
+    let mut interval = time::interval(Duration::from_secs(1));
+    let mut id = 1;
+    loop {
+        interval.tick().await;
+        let ui_t = std::thread::spawn(move || {
+            let _ = launch_ui(id);
+        });
+        ui_t.join().unwrap();
+        id += 1;
+    }
+}
+
+impl RootComponent<AppParams> for App {
+    fn root(&mut self, w: &dyn std::any::Any, app_params: &dyn Any) {
+        println!("root initialized");
+        let app_params = app_params.downcast_ref::<AppParams>().unwrap();
+        self.state_mut().app_channel = app_params.app_channel.clone();
+    }
+}
+
+fn launch_ui(id: i32) -> anyhow::Result<()> {
     // let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("debug"));
     // tracing_subscriber::fmt()
     //     .compact()
@@ -146,35 +168,62 @@ async fn main() -> anyhow::Result<()> {
         scale_factor: 1.0,
     };
 
+    println!("id: {id:?}");
     let window_info = WindowInfo {
-        id: "mctk.examples.hello-world".to_string(),
-        title: "Hello world!".to_string(),
-        namespace: "mctk.examples.hello-world".to_string(),
+        id: format!("{:?}{:?}", "mctk.examples.hello-world".to_string(), id),
+        title: format!("{:?}{:?}", "mctk.examples.hello-world".to_string(), id),
+        namespace: format!("{:?}{:?}", "mctk.examples.hello-world".to_string(), id),
+    };
+    let layer_shell_opts = LayerOptions {
+        anchor: wlr_layer::Anchor::LEFT | wlr_layer::Anchor::RIGHT | wlr_layer::Anchor::TOP,
+        layer: wlr_layer::Layer::Top,
+        keyboard_interactivity: wlr_layer::KeyboardInteractivity::Exclusive,
+        namespace: Some(window_info.namespace.clone()),
+        zone: 0 as i32,
     };
 
-    let (mut app, mut event_loop, ..) = xdg_window::XdgWindow::open_blocking::<App, AppMessage>(
-        XdgWindowParams {
+    let (app_channel_tx, app_channel_rx) = calloop::channel::channel();
+    let (mut app, mut event_loop, window_tx) = LayerWindow::open_blocking::<App, AppParams>(
+        LayerWindowParams {
             window_info,
             window_opts,
             fonts,
             assets,
+            layer_shell_opts,
             svgs,
             ..Default::default()
         },
-        None,
+        AppParams {
+            app_channel: Some(app_channel_tx),
+        },
     );
+    let handle = event_loop.handle();
+    let window_tx_2 = window_tx.clone();
+
+    let _ = handle.insert_source(app_channel_rx, move |event: Event<AppMessage>, _, app| {
+        let _ = match event {
+            // calloop::channel::Event::Msg(msg) => app.app.push_message(msg),
+            calloop::channel::Event::Msg(msg) => match msg {
+                AppMessage::Exit => {
+                    println!("app channel message {:?}", AppMessage::Exit);
+                    let _ = window_tx_2.send(WindowMessage::WindowEvent {
+                        event: mctk_smithay::WindowEvent::CloseRequested,
+                    });
+                }
+            },
+            calloop::channel::Event::Closed => {
+                println!("calloop::event::closed");
+            }
+        };
+    });
+
     loop {
-        event_loop
-            .dispatch(Duration::from_millis(16), &mut app)
-            .unwrap();
+        let _ = event_loop.dispatch(Duration::from_millis(16), &mut app);
+
+        if app.is_exited {
+            break;
+        }
     }
 
     Ok(())
-}
-
-impl RootComponent<AppMessage> for App {
-    fn root(&mut self, w: &dyn std::any::Any, app_channel: Option<Sender<AppMessage>>) {
-        println!("root initialized");
-        self.state_mut().app_channel = app_channel.clone();
-    }
 }

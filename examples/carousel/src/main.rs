@@ -24,6 +24,9 @@ enum HelloEvent {
 #[derive(Debug, Default)]
 pub struct App {}
 
+#[derive(Debug, Clone)]
+pub struct AppParams {}
+
 impl Component for App {
     fn view(&self) -> Option<Node> {
         // println!("app view called");
@@ -143,7 +146,7 @@ async fn main() -> anyhow::Result<()> {
         scale_factor: 1.0,
     };
 
-    let (mut app, mut event_loop, ..) = layer_window::LayerWindow::open_blocking::<App, AppMessage>(
+    let (mut app, mut event_loop, ..) = layer_window::LayerWindow::open_blocking::<App, AppParams>(
         LayerWindowParams {
             window_info,
             window_opts,
@@ -153,7 +156,7 @@ async fn main() -> anyhow::Result<()> {
             layer_shell_opts,
             ..Default::default()
         },
-        None,
+        AppParams {},
     );
 
     loop {
@@ -163,4 +166,4 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
-impl RootComponent<AppMessage> for App {}
+impl RootComponent<AppParams> for App {}
