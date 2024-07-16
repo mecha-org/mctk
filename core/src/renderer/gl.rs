@@ -3,9 +3,7 @@ use femtovg::Canvas;
 use glutin::api::egl::context::PossiblyCurrentContext;
 use glutin::api::egl::surface::Surface;
 use glutin::config::GlConfig;
-use glutin::context::{
-    ContextAttributesBuilder, NotCurrentGlContextSurfaceAccessor,
-};
+use glutin::context::{ContextApi, ContextAttributesBuilder, NotCurrentGlContextSurfaceAccessor};
 use glutin::display::GlDisplay;
 use glutin::surface::{SurfaceAttributesBuilder, WindowSurface};
 use glutin::{api::egl::display::Display, config::ConfigTemplateBuilder};
@@ -30,12 +28,22 @@ pub fn init_gl_surface_context(
         })
         .expect("No available configs");
 
-    let context_attributes = ContextAttributesBuilder::new().build(None);
-    let not_current = unsafe {
+    let context_attributes = ContextAttributesBuilder::new().build(Some(raw_window_handle));
+
+    // Since glutin by default tries to create OpenGL core context, which may not be
+    // present we should try gles.
+    let fallback_context_attributes = ContextAttributesBuilder::new()
+        .with_context_api(ContextApi::Gles(None))
+        .build(Some(raw_window_handle));
+    let mut not_current_gl_context = Some(unsafe {
         gl_display
             .create_context(&config, &context_attributes)
-            .expect("Failed to create OpenGL context")
-    };
+            .unwrap_or_else(|_| {
+                gl_display
+                    .create_context(&config, &fallback_context_attributes)
+                    .expect("failed to create context")
+            })
+    });
 
     let attrs = SurfaceAttributesBuilder::<WindowSurface>::new().build(
         raw_window_handle,
@@ -49,7 +57,9 @@ pub fn init_gl_surface_context(
             .expect("Failed to create OpenGl surface")
     };
 
-    let gl_context = not_current
+    let gl_context = not_current_gl_context
+        .take()
+        .unwrap()
         .make_current(&gl_surface)
         .expect("Failed to make newly created OpenGL context current");
 
