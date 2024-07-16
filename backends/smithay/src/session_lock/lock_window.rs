@@ -10,6 +10,7 @@ use raw_window_handle::{
 };
 use smithay_client_toolkit::reexports::calloop::channel::{Channel, Event, Sender};
 use smithay_client_toolkit::reexports::calloop::{self, EventLoop};
+use std::any::Any;
 use std::collections::HashMap;
 
 use crate::input::keyboard::{keysym_to_key, KeyboardEvent};
@@ -48,7 +49,7 @@ pub struct SessionLockWindowParams {
 impl SessionLockWindow {
     pub fn open_blocking<A, B>(
         params: SessionLockWindowParams,
-        app_channel: Option<Sender<B>>,
+        app_params: B,
     ) -> (
         SessionLockSctkWindow,
         EventLoop<'static, SessionLockSctkWindow>,
@@ -56,7 +57,7 @@ impl SessionLockWindow {
     )
     where
         A: 'static + RootComponent<B> + Component + Default + Send + Sync,
-        B: 'static,
+        B: 'static + Any + Clone,
     {
         let SessionLockWindowParams {
             window_opts,
@@ -85,7 +86,7 @@ impl SessionLockWindow {
                 svgs,
                 session_lock_tx,
             },
-            app_channel,
+            app_params,
         );
 
         // insert handle

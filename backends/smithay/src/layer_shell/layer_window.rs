@@ -12,6 +12,7 @@ use raw_window_handle::{
 };
 use smithay_client_toolkit::reexports::calloop::channel::{Channel, Event, Sender};
 use smithay_client_toolkit::reexports::calloop::{self, EventLoop};
+use std::any::Any;
 use std::collections::HashMap;
 
 use crate::input::keyboard::{keysym_to_key, KeyboardEvent};
@@ -55,7 +56,7 @@ pub enum LayerWindowMessage {
 impl LayerWindow {
     pub fn open_blocking<A, B>(
         params: LayerWindowParams,
-        app_channel: Option<Sender<B>>,
+        app_params: B,
     ) -> (
         LayerShellSctkWindow,
         EventLoop<'static, LayerShellSctkWindow>,
@@ -63,7 +64,7 @@ impl LayerWindow {
     )
     where
         A: 'static + RootComponent<B> + Component + Default + Send + Sync,
-        B: 'static,
+        B: 'static + Any + Clone,
     {
         let LayerWindowParams {
             window_info,
@@ -103,7 +104,7 @@ impl LayerWindow {
                 svgs,
                 layer_tx,
             },
-            app_channel,
+            app_params,
         );
 
         // insert handle

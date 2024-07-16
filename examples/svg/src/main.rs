@@ -20,6 +20,9 @@ pub enum AppMessage {}
 pub struct AppState {}
 
 #[derive(Debug, Clone)]
+pub struct AppParams {}
+
+#[derive(Debug, Clone)]
 enum HelloEvent {
     Button { name: String },
 }
@@ -176,7 +179,7 @@ async fn main() -> anyhow::Result<()> {
         namespace: "mctk.examples.svg".to_string(),
     };
 
-    let (mut app, mut event_loop, ..) = layer_window::LayerWindow::open_blocking::<App, AppMessage>(
+    let (mut app, mut event_loop, ..) = layer_window::LayerWindow::open_blocking::<App, AppParams>(
         LayerWindowParams {
             window_info,
             window_opts,
@@ -186,7 +189,7 @@ async fn main() -> anyhow::Result<()> {
             layer_shell_opts,
             ..Default::default()
         },
-        None,
+        AppParams {},
     );
 
     // event_loop
@@ -240,4 +243,4 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-impl RootComponent<AppMessage> for App {}
+impl RootComponent<AppParams> for App {}

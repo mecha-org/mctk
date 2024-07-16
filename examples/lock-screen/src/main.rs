@@ -20,6 +20,9 @@ use tracing_subscriber::EnvFilter;
 // App level channel
 pub enum AppMessage {}
 
+#[derive(Debug, Clone)]
+pub struct AppParams {}
+
 #[derive(Debug, Default)]
 pub struct AppState {
     value: f32,
@@ -120,7 +123,7 @@ async fn main() -> anyhow::Result<()> {
     let (session_lock_tx, session_lock_rx) = calloop::channel::channel();
 
     let (mut app, mut event_loop, ..) =
-        lock_window::SessionLockWindow::open_blocking::<App, AppMessage>(
+        lock_window::SessionLockWindow::open_blocking::<App, AppParams>(
             SessionLockWindowParams {
                 window_opts,
                 fonts,
@@ -129,7 +132,7 @@ async fn main() -> anyhow::Result<()> {
                 session_lock_tx,
                 session_lock_rx,
             },
-            None,
+            AppParams {},
         );
     loop {
         event_loop
@@ -144,8 +147,8 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-impl RootComponent<AppMessage> for App {
-    fn root(&mut self, w: &dyn Any, _: Option<Sender<AppMessage>>) {
+impl RootComponent<AppParams> for App {
+    fn root(&mut self, w: &dyn Any, _: &dyn Any) {
         let session_lock_window = w.downcast_ref::<SessionLockWindow>();
         if session_lock_window.is_some() {
             self.state_mut().session_lock_sender = Some(session_lock_window.unwrap().sender());

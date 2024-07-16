@@ -11,6 +11,7 @@ use raw_window_handle::{
 };
 use smithay_client_toolkit::reexports::calloop::channel::{Channel, Event, Sender};
 use smithay_client_toolkit::reexports::calloop::{self, EventLoop};
+use std::any::Any;
 use std::collections::HashMap;
 
 use crate::input::keyboard::{keysym_to_key, KeyboardEvent};
@@ -53,7 +54,7 @@ pub enum XdgWindowMessage {}
 impl XdgWindow {
     pub fn open_blocking<A, B>(
         params: XdgWindowParams,
-        app_channel: Option<Sender<B>>,
+        app_params: B,
     ) -> (
         XdgShellSctkWindow,
         EventLoop<'static, XdgShellSctkWindow>,
@@ -61,7 +62,7 @@ impl XdgWindow {
     )
     where
         A: 'static + RootComponent<B> + Component + Default + Send + Sync,
-        B: 'static,
+        B: 'static + Any + Clone,
     {
         let XdgWindowParams {
             window_info,
@@ -95,7 +96,7 @@ impl XdgWindow {
                 svgs,
                 xdg_window_tx,
             },
-            app_channel,
+            app_params,
         );
 
         // insert handle
