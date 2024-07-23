@@ -73,8 +73,16 @@ impl Component for App {
         None
     }
 
+    // fn on_tick(&mut self, _event: &mut mctk_core::event::Event<mctk_core::event::Tick>) {
+    //     let value = self.state_ref().value;
+    //     self.state_mut().value = value + 1.;
+    // }
+
     fn view(&self) -> Option<Node> {
         let btn_pressed = self.state_ref().btn_pressed;
+        let value = self.state_ref().value;
+
+        println!("value is {:?}", value);
 
         Some(
             node!(
@@ -85,13 +93,13 @@ impl Component for App {
                 ]
             )
             .push(node!(
-                Button::new(txt!("Click"))
+                Button::new(txt!(""))
                     .on_click(Box::new(|| msg!(HelloEvent::Exit)))
                     .on_double_click(Box::new(|| msg!(HelloEvent::ButtonPressed {
                         name: "Double clicked".to_string()
                     })))
                     .style("color", Color::rgb(255., 0., 0.))
-                    .style("background_color", Color::rgb(255., 255., 255.))
+                    .style("background_color", Color::rgb(value % 255., 255., 255.))
                     .style("active_color", Color::rgb(200., 200., 200.))
                     .style("font_size", 24.0),
                 lay![size: size!(180.0, 180.0), margin: [0., 0., 20., 0.]]
@@ -108,9 +116,6 @@ impl Component for App {
             }
             Some(HelloEvent::Exit) => {
                 println!("button clicked");
-                if let Some(app_channel) = &self.state_ref().app_channel {
-                    let _ = app_channel.send(AppMessage::Exit);
-                };
             }
             _ => (),
         }
@@ -121,16 +126,11 @@ impl Component for App {
 // Layer Surface App
 #[tokio::main]
 async fn main() {
-    let mut interval = time::interval(Duration::from_secs(1));
-    let mut id = 1;
-    loop {
-        interval.tick().await;
-        let ui_t = std::thread::spawn(move || {
-            let _ = launch_ui(id);
-        });
-        ui_t.join().unwrap();
-        id += 1;
-    }
+    let id = 1;
+    let ui_t = std::thread::spawn(move || {
+        let _ = launch_ui(id);
+    });
+    ui_t.join().unwrap();
 }
 
 impl RootComponent<AppParams> for App {
@@ -218,7 +218,7 @@ fn launch_ui(id: i32) -> anyhow::Result<()> {
     });
 
     loop {
-        let _ = event_loop.dispatch(Duration::from_millis(16), &mut app);
+        let _ = event_loop.dispatch(None, &mut app);
 
         if app.is_exited {
             break;
