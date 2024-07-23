@@ -108,9 +108,6 @@ impl Component for App {
             }
             Some(HelloEvent::Exit) => {
                 println!("button clicked");
-                if let Some(app_channel) = &self.state_ref().app_channel {
-                    let _ = app_channel.send(AppMessage::Exit);
-                };
             }
             _ => (),
         }
@@ -121,16 +118,11 @@ impl Component for App {
 // Layer Surface App
 #[tokio::main]
 async fn main() {
-    let mut interval = time::interval(Duration::from_secs(1));
-    let mut id = 1;
-    loop {
-        interval.tick().await;
-        let ui_t = std::thread::spawn(move || {
-            let _ = launch_ui(id);
-        });
-        ui_t.join().unwrap();
-        id += 1;
-    }
+    let id = 1;
+    let ui_t = std::thread::spawn(move || {
+        let _ = launch_ui(id);
+    });
+    ui_t.join().unwrap();
 }
 
 impl RootComponent<AppParams> for App {
