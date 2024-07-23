@@ -53,6 +53,7 @@ use wayland_client::protocol::{
 
 pub struct LayerShellSctkWindow {
     // conn: Connection,
+    queue_handle: QueueHandle<LayerShellSctkWindow>,
     window_tx: Sender<WindowMessage>,
     wl_display: WlDisplay,
     registry_state: RegistryState,
@@ -165,6 +166,7 @@ impl LayerShellSctkWindow {
         let state = LayerShellSctkWindow {
             // app,
             // conn,
+            queue_handle: queue_handle.clone(),
             window_tx,
             wl_display,
             registry_state: RegistryState::new(&globals),
@@ -244,6 +246,15 @@ impl LayerShellSctkWindow {
 
         layer.commit();
     }
+
+    pub fn next_frame(&mut self) {
+        let layer = &mut self.layer;
+        let qh = &self.queue_handle;
+
+        // request next frame
+        layer.wl_surface().frame(qh, layer.wl_surface().clone());
+        layer.commit();
+    }
 }
 
 impl CompositorHandler for LayerShellSctkWindow {
@@ -269,14 +280,6 @@ impl CompositorHandler for LayerShellSctkWindow {
         }
 
         let _ = self.send_compositor_frame();
-
-        self.layer
-            .wl_surface()
-            .damage_buffer(0, 0, self.width as i32, self.height as i32);
-        self.layer
-            .wl_surface()
-            .frame(qh, self.layer.wl_surface().clone());
-        self.layer.commit();
     }
 
     fn transform_changed(

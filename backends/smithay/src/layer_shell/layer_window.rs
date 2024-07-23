@@ -138,6 +138,7 @@ impl LayerWindow {
                             WindowMessage::RedrawRequested => {
                                 // ui.handle_input(&Input::Timer);
                                 ui.render();
+                                app_window.next_frame();
                             }
                             WindowMessage::CompositorFrame => {
                                 ui.handle_input(&Input::Timer);
