@@ -96,13 +96,10 @@ impl Component for Button {
                 axis_alignment: crate::layout::Alignment::Center,
             )
         )
-        .push(node!(
-            super::Text::new(self.label.clone())
-                .style("size", self.style_val("font_size").unwrap())
-                .style("color", self.style_val("text_color").unwrap())
-                .style("h_alignment", self.style_val("h_alignment").unwrap()),
-            lay![size_pct: [100, Auto],]
-        ));
+        .push(node!(super::Text::new(self.label.clone())
+            .style("size", self.style_val("font_size").unwrap())
+            .style("color", self.style_val("text_color").unwrap())
+            .style("h_alignment", self.style_val("h_alignment").unwrap()),));
 
         // if let (Some(p), Some(tt)) = (self.state_ref().tool_tip_open, self.tool_tip.as_ref()) {
         //     base = base.push(node!(

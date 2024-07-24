@@ -93,7 +93,7 @@ impl Component for App {
                 ]
             )
             .push(node!(
-                Button::new(txt!(""))
+                Button::new(txt!("Click"))
                     .on_click(Box::new(|| msg!(HelloEvent::Exit)))
                     .on_double_click(Box::new(|| msg!(HelloEvent::ButtonPressed {
                         name: "Double clicked".to_string()

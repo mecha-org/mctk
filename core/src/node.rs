@@ -362,7 +362,6 @@ impl Node {
         );
     }
 
-    /// Return whether to redraw the screen
     pub(crate) fn render(
         &mut self,
         caches: Caches,
@@ -378,9 +377,7 @@ impl Node {
             self.inner_scale.hash(&mut hasher);
             self.render_hash = hasher.finish();
 
-            //temporary commented to solve carousel
-            //if self.render_hash != prev.render_hash
-            if true {
+            if self.render_hash != prev.render_hash {
                 let context = RenderContext {
                     aabb: self.aabb,
                     inner_scale: self.inner_scale,
@@ -414,13 +411,21 @@ impl Node {
                     // println!("clip set");
                 }
                 ret = true;
+            } else {
+                self.render_cache = prev.render_cache.take();
             }
+
+            let scrollable = self.scrollable();
 
             let prev_children = &mut prev.children;
             for child in self.children.iter_mut() {
                 ret |= child.render(
                     caches.clone(),
-                    prev_children.iter_mut().find(|x| x.key == child.key),
+                    if scrollable {
+                        None
+                    } else {
+                        prev_children.iter_mut().find(|x| x.key == child.key)
+                    },
                     scale_factor,
                 )
             }
