@@ -82,6 +82,7 @@ pub struct SessionLockSctkWindow {
     // session_lock_manager: ExtSessionLockManagerV1,
     pub session_lock: ExtSessionLockV1,
     // session_lock_surface: ExtSessionLockSurfaceV1,
+    queue_handle: QueueHandle<SessionLockSctkWindow>,
 }
 
 impl SessionLockSctkWindow {
@@ -159,6 +160,7 @@ impl SessionLockSctkWindow {
 
         let state = SessionLockSctkWindow {
             // app,
+            queue_handle: queue_handle.clone(),
             conn,
             window_tx,
             registry_state: RegistryState::new(&globals),
@@ -231,6 +233,14 @@ impl SessionLockSctkWindow {
         // close the client
         self.close();
     }
+
+    pub fn next_frame(&mut self) {
+        let qh = &self.queue_handle;
+
+        // request next frame
+        self.wl_surface.frame(qh, self.wl_surface.clone());
+        self.wl_surface.commit();
+    }
 }
 
 impl CompositorHandler for SessionLockSctkWindow {
@@ -255,11 +265,6 @@ impl CompositorHandler for SessionLockSctkWindow {
             return;
         }
         let _ = self.send_compositor_frame();
-
-        self.wl_surface
-            .damage_buffer(0, 0, self.width as i32, self.height as i32);
-        self.wl_surface.frame(qh, self.wl_surface.clone());
-        self.wl_surface.commit();
     }
 
     fn transform_changed(

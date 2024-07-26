@@ -120,6 +120,7 @@ impl SessionLockWindow {
                             }
                             WindowMessage::RedrawRequested => {
                                 ui.render();
+                                app_window.next_frame();
                             }
                             WindowMessage::CompositorFrame => {
                                 ui.handle_input(&Input::Timer);
