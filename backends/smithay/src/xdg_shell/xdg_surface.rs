@@ -59,6 +59,7 @@ use wayland_client::protocol::{
 use super::xdg_window::XdgWindowMessage;
 
 pub struct XdgShellSctkWindow {
+    queue_handle: QueueHandle<XdgShellSctkWindow>,
     window_tx: Sender<WindowMessage>,
     wl_display: WlDisplay,
     registry_state: RegistryState,
@@ -150,6 +151,7 @@ impl XdgShellSctkWindow {
         }
 
         let state = XdgShellSctkWindow {
+            queue_handle: queue_handle.clone(),
             window_tx,
             wl_display,
             registry_state: RegistryState::new(&globals),
@@ -213,6 +215,16 @@ impl XdgShellSctkWindow {
         window.commit();
     }
 
+    pub fn next_frame(&mut self) {
+        let qh = &self.queue_handle;
+
+        // request next frame
+        self.xdg_window
+            .wl_surface()
+            .frame(qh, self.xdg_window.wl_surface().clone());
+        self.xdg_window.commit();
+    }
+
     pub fn close(&mut self) {
         self.is_exited = true;
     }
@@ -240,14 +252,6 @@ impl CompositorHandler for XdgShellSctkWindow {
             return;
         }
         let _ = self.send_compositor_frame();
-
-        self.xdg_window
-            .wl_surface()
-            .damage_buffer(0, 0, self.width as i32, self.height as i32);
-        self.xdg_window
-            .wl_surface()
-            .frame(qh, self.xdg_window.wl_surface().clone());
-        self.xdg_window.commit();
     }
 
     fn transform_changed(
