@@ -152,6 +152,12 @@ impl<
                         inst_end();
 
                         let renderer = renderer.read().unwrap();
+
+                        if renderer.is_none() {
+                            *node_dirty.write().unwrap() = true;
+                            return;
+                        }
+
                         let caches: crate::renderer::Caches = renderer.as_ref().unwrap().caches();
 
                         inst("Node::layout");
