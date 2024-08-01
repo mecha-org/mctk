@@ -3,8 +3,11 @@ pub mod gl;
 pub mod svg;
 pub mod text;
 
+use canvas::GlCanvasContext;
+
 use crate::{font_cache::FontCache, window::Window, Node, PixelSize};
 use std::{
+    any::Any,
     fmt,
     sync::{Arc, RwLock},
 };
@@ -25,10 +28,12 @@ pub struct Caches {
     pub font: Arc<RwLock<FontCache>>,
 }
 
+pub trait RendererContext {}
+
 pub(crate) trait Renderer: fmt::Debug + std::marker::Sized + Send + Sync {
     fn new<W: Window>(window: Arc<RwLock<W>>) -> Self;
     fn configure<W: crate::window::Window>(&mut self, window: Arc<RwLock<W>>) {}
-    fn render(&mut self, _node: &Node, _physical_size: PixelSize) {}
+    fn render(&mut self, _node: &Node, _physical_size: PixelSize, ctx: &mut (dyn Any + 'static)) {}
     fn resize(&mut self, width: u32, height: u32) {}
     fn caches(&self) -> Caches;
 }

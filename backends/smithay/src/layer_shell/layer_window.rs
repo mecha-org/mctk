@@ -138,6 +138,8 @@ impl LayerWindow {
                             WindowMessage::RedrawRequested => {
                                 // ui.handle_input(&Input::Timer);
                                 ui.render();
+                            }
+                            WindowMessage::RequestNextFrame => {
                                 app_window.next_frame();
                             }
                             WindowMessage::CompositorFrame => {
@@ -293,6 +295,10 @@ impl mctk_core::window::Window for LayerWindow {
 
     fn redraw(&self) {
         let _ = self.window_tx.send(WindowMessage::RedrawRequested);
+    }
+
+    fn next_frame(&self) {
+        let _ = self.window_tx.send(WindowMessage::RequestNextFrame);
     }
 
     fn fonts(&self) -> cosmic_text::fontdb::Database {

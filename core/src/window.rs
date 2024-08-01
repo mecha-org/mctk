@@ -20,6 +20,9 @@ pub trait Window: HasRawWindowHandle + HasRawDisplayHandle + Send + Sync + Any {
     /// For internal use only.
     fn redraw(&self) {}
 
+    /// Request next frame
+    fn next_frame(&self) {}
+
     /// Set the current cursor. Cursor names are backend-specific, but they should support the following:
     /// - "Arrow"
     /// - "None"

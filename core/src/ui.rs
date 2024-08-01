@@ -1,22 +1,17 @@
 use crate::component::{Message, RootComponent};
 use crate::event::{self, Event, EventCache, EventInput};
 use crate::input::*;
-use crate::instrumenting::*;
 use crate::layout::*;
 use crate::raw_handle::RawWaylandHandle;
+use crate::renderer::canvas::{self, GlCanvasContext};
+use crate::renderer::gl::{self};
 use crate::renderer::Renderer;
 use crate::{component::Component, node::Node, types::PixelSize};
-use crate::{
-    lay,
-    node::Registration,
-    // renderer::{canvas::CanvasContext, Renderer},
-    size,
-    types::*,
-    window::Window,
-};
+use crate::{lay, node::Registration, size, types::*, window::Window};
 use crossbeam_channel::{unbounded, Receiver, Sender};
-use smithay_client_toolkit::reexports::calloop;
+use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
 use std::any::Any;
+use std::collections::HashMap;
 use std::{
     cell::UnsafeCell,
     marker::PhantomData,
@@ -24,7 +19,6 @@ use std::{
     thread::{self, JoinHandle},
     time::Instant,
 };
-use tracing::info;
 
 // This can become feature-dependant
 type ActiveRenderer = crate::renderer::canvas::CanvasRenderer;
@@ -32,9 +26,9 @@ type ActiveRenderer = crate::renderer::canvas::CanvasRenderer;
 pub struct UI<W: Window, A: Component + Default + Send + Sync, B> {
     renderer: Arc<RwLock<Option<ActiveRenderer>>>,
     pub window: Arc<RwLock<W>>,
-    // _render_thread: JoinHandle<()>,
+    render_thread: Option<JoinHandle<()>>,
     _draw_thread: Option<JoinHandle<()>>,
-    // render_channel: Sender<()>,
+    render_channel: Option<Sender<RenderMessage>>,
     draw_channel: Option<Sender<()>>,
     node: Arc<RwLock<Node>>,
     phantom_app: PhantomData<A>,
@@ -48,11 +42,17 @@ pub struct UI<W: Window, A: Component + Default + Send + Sync, B> {
     app_params: B,
 }
 
-thread_local!(
-    static IMMEDIATE_FOCUS: UnsafeCell<Option<u64>> = {
-        UnsafeCell::new(None)
-    }
-);
+#[derive(PartialEq)]
+enum RenderMessage {
+    Render,
+    Exit,
+}
+
+// thread_local!(
+//     static IMMEDIATE_FOCUS: UnsafeCell<Option<u64>> = {
+//         UnsafeCell::new(None)
+//     }
+// );
 
 // fn immediate_focus() -> Option<u64> {
 //     *IMMEDIATE_FOCUS.with(|r| unsafe { r.get().as_ref().unwrap() })
@@ -98,105 +98,16 @@ impl<
         B: 'static + Any + Clone,
     > UI<W, A, B>
 {
-    fn node_ref(&self) -> RwLockReadGuard<'_, Node> {
-        self.node.read().unwrap()
-    }
-
-    fn node_mut(&mut self) -> RwLockWriteGuard<'_, Node> {
-        self.node.write().unwrap()
-    }
-
-    fn draw_thread(
-        receiver: Receiver<()>,
-        renderer: Arc<RwLock<Option<ActiveRenderer>>>,
-        node: Arc<RwLock<Node>>,
-        scale_factor: Arc<RwLock<f32>>,
-        frame_dirty: Arc<RwLock<bool>>,
-        node_dirty: Arc<RwLock<bool>>,
-        registrations: Arc<RwLock<Vec<Registration>>>,
-        window: Arc<RwLock<W>>,
-    ) -> JoinHandle<()> {
-        thread::spawn(move || {
-            for _ in receiver.iter() {
-                if *node_dirty.read().unwrap() {
-                    // Set the node to clean right away so that concurrent events can reset it to dirty
-                    *node_dirty.write().unwrap() = false;
-                    inst("UI::draw");
-                    let logical_size = window.read().unwrap().logical_size();
-                    let scale_factor = *scale_factor.read().unwrap();
-                    let mut new = Node::new(
-                        Box::<A>::default(),
-                        0,
-                        lay!(size: size!(logical_size.width as f32, logical_size.height as f32)),
-                    );
-
-                    {
-                        // We need to lock the renderer while we modify the node, so that we don't try to render it while doing so
-                        // Since this will cause a deadlock
-                        let renderer = renderer.write().unwrap();
-
-                        if renderer.is_none() {
-                            *node_dirty.write().unwrap() = true;
-                            return;
-                        }
-                    }
-
-                    let mut do_render = false;
-                    {
-                        // We need to acquire a lock on the node once we `view` it, because we remove its state at this point
-                        let mut old = node.write().unwrap();
-                        inst("Node::view");
-                        let mut new_registrations: Vec<Registration> = vec![];
-                        new.view(Some(&mut old), &mut new_registrations);
-                        *registrations.write().unwrap() = new_registrations;
-                        inst_end();
-
-                        let renderer = renderer.read().unwrap();
-
-                        if renderer.is_none() {
-                            *node_dirty.write().unwrap() = true;
-                            return;
-                        }
-
-                        let caches: crate::renderer::Caches = renderer.as_ref().unwrap().caches();
-
-                        inst("Node::layout");
-                        new.layout(&old, &mut caches.font.write().unwrap(), scale_factor);
-                        inst_end();
-
-                        inst("Node::render");
-                        do_render = new.render(caches, Some(&mut old), scale_factor);
-                        inst_end();
-
-                        *old = new;
-                    }
-                    {
-                        if do_render {
-                            let window = window.read();
-                            // println!("window::redraw start {:?}", do_render);
-                            window.unwrap().redraw();
-                        }
-
-                        *frame_dirty.write().unwrap() = true;
-                    }
-
-                    inst_end();
-                }
-            }
-        })
-    }
-
     /// Create a new `UI`, given a [`Window`].
     pub fn new(window: W, app_params: B) -> Self {
         let scale_factor = Arc::new(RwLock::new(window.scale_factor()));
         // dbg!(scale_factor);
         let physical_size = Arc::new(RwLock::new(window.physical_size()));
         let logical_size = Arc::new(RwLock::new(window.logical_size()));
-        info!(
+        println!(
             "New window with physical size {:?} client size {:?} and scale factor {:?}",
             physical_size, logical_size, scale_factor
         );
-        inst("UI::new");
         let mut component = A::default();
         component.init();
 
@@ -221,8 +132,8 @@ impl<
         let n = Self {
             app_params: app_params,
             renderer,
-            // render_channel,
-            // _render_thread: render_thread,
+            render_channel: None,
+            render_thread: None,
             frame_dirty: frame_dirty.clone(),
             draw_channel: None,
             _draw_thread: None,
@@ -236,12 +147,89 @@ impl<
             event_cache,
             node_dirty,
         };
-        inst_end();
         n
     }
 
+    fn node_ref(&self) -> RwLockReadGuard<'_, Node> {
+        self.node.read().unwrap()
+    }
+
+    fn node_mut(&mut self) -> RwLockWriteGuard<'_, Node> {
+        self.node.write().unwrap()
+    }
+
+    fn draw_thread(
+        receiver: Receiver<()>,
+        renderer: Arc<RwLock<Option<ActiveRenderer>>>,
+        node: Arc<RwLock<Node>>,
+        scale_factor: Arc<RwLock<f32>>,
+        frame_dirty: Arc<RwLock<bool>>,
+        node_dirty: Arc<RwLock<bool>>,
+        registrations: Arc<RwLock<Vec<Registration>>>,
+        window: Arc<RwLock<W>>,
+    ) -> JoinHandle<()> {
+        thread::spawn(move || {
+            for _ in receiver.iter() {
+                if *node_dirty.read().unwrap() {
+                    // Set the node to clean right away so that concurrent events can reset it to dirty
+                    *node_dirty.write().unwrap() = false;
+                    let logical_size = window.read().unwrap().logical_size();
+                    let scale_factor = *scale_factor.read().unwrap();
+                    let mut new = Node::new(
+                        Box::<A>::default(),
+                        0,
+                        lay!(size: size!(logical_size.width as f32, logical_size.height as f32)),
+                    );
+
+                    {
+                        // We need to lock the renderer while we modify the node, so that we don't try to render it while doing so
+                        // Since this will cause a deadlock
+                        let renderer = renderer.write().unwrap();
+
+                        if renderer.is_none() {
+                            *node_dirty.write().unwrap() = true;
+                            return;
+                        }
+                    }
+
+                    let mut do_render = false;
+                    {
+                        // We need to acquire a lock on the node once we `view` it, because we remove its state at this point
+                        let mut old = node.write().unwrap();
+                        let mut new_registrations: Vec<Registration> = vec![];
+                        new.view(Some(&mut old), &mut new_registrations);
+                        *registrations.write().unwrap() = new_registrations;
+
+                        let renderer = renderer.read().unwrap();
+
+                        if renderer.is_none() {
+                            *node_dirty.write().unwrap() = true;
+                            return;
+                        }
+
+                        let caches: crate::renderer::Caches = renderer.as_ref().unwrap().caches();
+
+                        new.layout(&old, &mut caches.font.write().unwrap(), scale_factor);
+
+                        do_render = new.render(caches, Some(&mut old), scale_factor);
+
+                        *old = new;
+                    }
+                    {
+                        if do_render {
+                            let window = window.read();
+                            // println!("window::redraw start {:?}", do_render);
+                            window.unwrap().redraw();
+                        }
+
+                        *frame_dirty.write().unwrap() = true;
+                    }
+                }
+            }
+        })
+    }
+
     pub fn configure(&mut self, width: u32, height: u32, wayland_handle: RawWaylandHandle) {
-        println!("ui:configure {} {}", width, height);
         {
             let mut window = self.window.write().unwrap();
 
@@ -253,12 +241,17 @@ impl<
         }
         // reconfigure the renderer
         let window = self.window.clone();
+        let assets = window.read().unwrap().assets();
         let renderer = Arc::new(RwLock::new(Some(ActiveRenderer::new(window.clone()))));
 
         self.renderer = renderer.clone();
 
         // Create a channel to speak to the drawer. Every time we send to this channel we want to trigger a draw;
-        let (draw_channel, receiver) = unbounded::<()>();
+        let (draw_channel, d_receiver) = unbounded::<()>();
+
+        // Create a channel to speak to the renderer. Every time we send to this channel we want to trigger a render;
+        let (render_channel, r_receiver) = unbounded::<RenderMessage>();
+
         let node = self.node.clone();
         let scale_factor = Arc::new(RwLock::new(window.clone().read().unwrap().scale_factor()));
         let frame_dirty = self.frame_dirty.clone();
@@ -266,43 +259,83 @@ impl<
         let registrations = self.registrations.clone();
 
         let draw_thread = Self::draw_thread(
-            receiver,
+            d_receiver,
             renderer.clone(),
-            node,
+            node.clone(),
             // logical_size.clone(),
-            scale_factor,
-            frame_dirty,
+            scale_factor.clone(),
+            frame_dirty.clone(),
             node_dirty,
             registrations,
-            window,
+            window.clone(),
+        );
+
+        let render_thread = Self::render_thread(
+            r_receiver,
+            wayland_handle,
+            scale_factor.clone(),
+            assets,
+            renderer.clone(),
+            node.clone(),
+            self.logical_size.clone(),
+            frame_dirty.clone(),
+            window.clone(),
         );
 
         self._draw_thread = Some(draw_thread);
         self.draw_channel = Some(draw_channel);
+
+        self.render_thread = Some(render_thread);
+        self.render_channel = Some(render_channel);
 
         // mark node dirty, so that we can redraw
         *self.node_dirty.write().unwrap() = true;
     }
 
     pub fn resize(&mut self, width: u32, height: u32) {
-        println!("ui:resize {} {}", width, height);
-
         let mut window = self.window.write().unwrap();
+        let wayland_handle =
+            RawWaylandHandle(window.raw_display_handle(), window.raw_window_handle());
+        let assets = window.assets();
 
         // update the size for window, ui
         window.set_size(width, height);
         self.logical_size = Arc::new(RwLock::new(window.logical_size()));
 
         // update the renderer canvas
-        let mut renderer = self.renderer.write().unwrap();
+        let renderer = self.renderer.write().unwrap();
 
         if renderer.is_none() {
             return;
         }
 
-        renderer.as_mut().unwrap().resize(width, height);
+        // kill the existing thread
+        self.render_channel
+            .as_ref()
+            .unwrap()
+            .send(RenderMessage::Exit)
+            .unwrap();
 
-        // mark node dirty, so that we can redraw
+        // create the render thread again, so that new gl_context is created
+        // Create a channel to speak to the renderer. Every time we send to this channel we want to trigger a render;
+        let (render_channel, r_receiver) = unbounded::<RenderMessage>();
+
+        let render_thread = Self::render_thread(
+            r_receiver,
+            wayland_handle,
+            self.scale_factor.clone(),
+            assets,
+            self.renderer.clone(),
+            self.node.clone(),
+            self.logical_size.clone(),
+            self.frame_dirty.clone(),
+            self.window.clone(),
+        );
+
+        self.render_thread = Some(render_thread);
+        self.render_channel = Some(render_channel);
+
+        // // mark node dirty, so that we can redraw
         *self.node_dirty.write().unwrap() = true;
     }
 
@@ -323,32 +356,86 @@ impl<
         }
     }
 
+    fn render_thread(
+        receiver: Receiver<RenderMessage>,
+        raw_wayland_handle: RawWaylandHandle,
+        scale_factor: Arc<RwLock<f32>>,
+        assets: HashMap<String, AssetParams>,
+        renderer: Arc<RwLock<Option<ActiveRenderer>>>,
+        node: Arc<RwLock<Node>>,
+        logical_size: Arc<RwLock<PixelSize>>,
+        frame_dirty: Arc<RwLock<bool>>,
+        window: Arc<RwLock<W>>,
+    ) -> JoinHandle<()> {
+        let size = logical_size.read().unwrap();
+        let width = size.width;
+        let height = size.height;
+
+        thread::spawn(move || {
+            // let scale_factor = window.scale_factor();
+            // let size = window.logical_size();
+            let raw_window_handle = raw_wayland_handle.raw_window_handle();
+            let raw_display_handle = raw_wayland_handle.raw_display_handle();
+
+            let (gl_display, gl_surface, gl_context) =
+                gl::init_gl(raw_display_handle, raw_window_handle, (width, height));
+            let mut gl_canvas =
+                gl::init_gl_canvas(&gl_display, (width, height), *scale_factor.read().unwrap());
+
+            // load assets
+            canvas::load_assets_to_canvas(&mut gl_canvas, assets);
+
+            let mut gl_context = GlCanvasContext {
+                gl_canvas,
+                gl_context,
+                gl_surface,
+            };
+
+            for msg in receiver.iter() {
+                // exit thread
+                if msg == RenderMessage::Exit {
+                    break;
+                }
+
+                if *frame_dirty.read().unwrap() {
+                    let node = node.read().unwrap();
+
+                    let mut renderer = renderer.write().unwrap();
+
+                    if renderer.is_none() {
+                        return;
+                    }
+
+                    renderer.as_mut().unwrap().render(
+                        &node,
+                        PixelSize { width, height },
+                        &mut gl_context,
+                    );
+
+                    *frame_dirty.write().unwrap() = false;
+
+                    // request next frame
+                    let window = window.read();
+                    // println!("window::redraw start {:?}", do_render);
+                    window.unwrap().next_frame();
+                }
+            }
+        })
+    }
+
     /// Signal to the render thread that it may be time to render a frame.
     /// A render will only occur if the draw thread has marked `frame_dirty` as true,
     /// which it will do after drawing. This thread does not interact with the user-facing API,
     /// just the [`Renderable`][crate::renderables::Renderable]s generated during [`draw`][UI#method.draw].
     pub fn render(&mut self) {
-        let frame_dirty = &self.frame_dirty;
-        // self.render_channel.send(()).unwrap();
-        if *frame_dirty.read().unwrap() {
-            inst("UI::render");
-            // Pull out size so it gets pulled into the renderer lock
-            let size = *self.physical_size.read().unwrap();
-
-            let node = &self.node.read().unwrap();
-
-            let mut renderer = self.renderer.write().unwrap();
-
-            if renderer.is_none() {
-                return;
-            }
-
-            renderer.as_mut().unwrap().render(node, size);
-
-            *frame_dirty.write().unwrap() = false;
-            // println!("rendered");
-            inst_end();
+        if self.render_channel.is_none() {
+            return;
         }
+        self.render_channel
+            .as_ref()
+            .unwrap()
+            .send(RenderMessage::Render)
+            .unwrap();
     }
 
     fn blur(&mut self) {
@@ -410,7 +497,6 @@ impl<
 
     /// Handle [`Input`]s coming from the [`Window`] backend.
     pub fn handle_input(&mut self, input: &Input) {
-        inst("UI::handle_input");
         // if self.node.is_none() || self.renderer.is_none() {
         //     // If there is no node, the event has happened after exiting
         //     // For some reason checking for both works better, even though they're unset at the same time?
@@ -885,22 +971,6 @@ impl<
         // clear_immediate_focus();
 
         // send draw request, it will draw if node is dirty
-
-        inst_end();
-    }
-
-    /// Add a font to the [`font_cache::FontCache`][crate::font_cache::FontCache]. The name provided is the name used to reference the font in a [`TextSegment`][crate::font_cache::TextSegment]. `bytes` are the bytes of a OpenType font, which must be held in static memory.
-    pub fn add_font(&mut self, name: String, bytes: &'static [u8]) {
-        // self.renderer
-        //     .read()
-        //     .unwrap()
-        //     .as_ref()
-        //     .unwrap()
-        //     .caches()
-        //     .font
-        //     .write()
-        //     .unwrap()
-        //     .add_font(name, bytes);
     }
 
     /// Calls [`Component#update`][Component#method.update] with `msg` on the root Node of the application. This will always trigger a redraw.
