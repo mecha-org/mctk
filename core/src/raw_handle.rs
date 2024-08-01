@@ -16,3 +16,8 @@ unsafe impl HasRawWindowHandle for RawWaylandHandle {
         self.1
     }
 }
+
+// This is safe because for wayland we can pass handles between threads
+// ref: https://github.com/rust-windowing/raw-window-handle/issues/85
+unsafe impl Send for RawWaylandHandle {}
+unsafe impl Sync for RawWaylandHandle {}

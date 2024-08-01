@@ -44,6 +44,7 @@ pub enum WindowMessage {
     CompositorFrame,
     MainEventsCleared,
     RedrawRequested,
+    RequestNextFrame,
     Resize {
         width: u32,
         height: u32,

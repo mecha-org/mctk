@@ -120,6 +120,8 @@ impl SessionLockWindow {
                             }
                             WindowMessage::RedrawRequested => {
                                 ui.render();
+                            }
+                            WindowMessage::RequestNextFrame => {
                                 app_window.next_frame();
                             }
                             WindowMessage::CompositorFrame => {
@@ -272,6 +274,10 @@ impl mctk_core::window::Window for SessionLockWindow {
 
     fn redraw(&self) {
         let _ = self.window_tx.send(WindowMessage::RedrawRequested);
+    }
+
+    fn next_frame(&self) {
+        let _ = self.window_tx.send(WindowMessage::RequestNextFrame);
     }
 
     fn fonts(&self) -> cosmic_text::fontdb::Database {

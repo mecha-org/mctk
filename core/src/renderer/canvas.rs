@@ -1,7 +1,7 @@
 use super::gl::{init_gl, init_gl_canvas};
 use super::svg::{load_svg_paths, SvgData};
 use super::text::TextRenderer;
-use super::Caches;
+use super::{Caches, RendererContext};
 use crate::font_cache::FontCache;
 use crate::renderables::Renderable;
 use crate::{node::Node, types::PixelSize};
@@ -15,12 +15,23 @@ use glutin::context::{PossiblyCurrentContextGlSurfaceAccessor, PossiblyCurrentGl
 use glutin::surface::{GlSurface, WindowSurface};
 use image::DynamicImage;
 use raw_window_handle::{RawDisplayHandle, RawWindowHandle};
+use std::any::Any;
 use std::collections::HashMap;
 use std::fmt;
 use std::num::NonZeroU32;
 use std::sync::{Arc, RwLock};
 
-fn load_assets(
+pub struct GlCanvasContext {
+    // egl context, surface
+    pub gl_context: PossiblyCurrentContext,
+    pub gl_surface: egl::surface::Surface<WindowSurface>,
+    // femto canvas
+    pub gl_canvas: Canvas<OpenGl>,
+}
+
+impl RendererContext for GlCanvasContext {}
+
+pub fn load_assets_to_canvas(
     gl_canvas: &mut Canvas<OpenGl>,
     assets: HashMap<String, AssetParams>,
 ) -> HashMap<String, ImageId> {
@@ -77,52 +88,12 @@ fn load_assets(
     loaded_assets
 }
 
-fn init_canvas_renderer(
-    raw_display_handle: RawDisplayHandle,
-    raw_window_handle: RawWindowHandle,
-    logical_size: PixelSize,
-    scale_factor: f32,
-    assets: HashMap<String, AssetParams>,
-) -> (CanvasContext, HashMap<String, ImageId>) {
-    let size = logical_size;
-    let width = size.width;
-    let height = size.height;
-
-    println!("renderer:init_canvas_renderer {} {}", width, height);
-
-    let (gl_display, gl_surface, gl_context) =
-        init_gl(raw_display_handle, raw_window_handle, (width, height));
-    let mut gl_canvas = init_gl_canvas(&gl_display, (width, height), scale_factor);
-
-    let loaded_assets = load_assets(&mut gl_canvas, assets);
-
-    let canvas_context = CanvasContext {
-        gl_canvas,
-        gl_context,
-        gl_surface,
-    };
-
-    (canvas_context, loaded_assets)
-}
-
-pub struct CanvasContext {
-    // egl context, surface
-    pub gl_context: PossiblyCurrentContext,
-    pub gl_surface: egl::surface::Surface<WindowSurface>,
-    // femto canvas
-    pub gl_canvas: Canvas<OpenGl>,
-}
-
 pub struct CanvasRenderer {
     fonts: cosmic_text::fontdb::Database,
-    scale_factor: f32,
-    context: CanvasContext,
     text_renderer: TextRenderer,
     assets: HashMap<String, ImageId>,
     svgs: HashMap<String, SvgData>,
 }
-
-impl CanvasRenderer {}
 
 unsafe impl Send for CanvasRenderer {}
 unsafe impl Sync for CanvasRenderer {}
@@ -138,72 +109,32 @@ impl super::Renderer for CanvasRenderer {
     fn new<W: crate::window::Window>(w: Arc<RwLock<W>>) -> Self {
         let window = w.read().unwrap();
         let fonts = window.fonts();
-        let scale_factor = window.scale_factor();
-        let (canvas_context, assets) = init_canvas_renderer(
-            window.raw_display_handle(),
-            window.raw_window_handle(),
-            window.logical_size(),
-            scale_factor,
-            window.assets(),
-        );
+        // let (canvas_context, assets) = init_canvas_context(
+        //     window.raw_display_handle(),
+        //     window.raw_window_handle(),
+        //     window.logical_size(),
+        //     scale_factor,
+        //     window.assets(),
+        // );
         let text_renderer = TextRenderer::new(fonts.clone());
         let svgs = window.svgs();
-        let mut loaded_svgs = load_svg_paths(svgs, fonts.clone());
+        let loaded_svgs = load_svg_paths(svgs, fonts.clone());
 
         Self {
             fonts: fonts.clone(),
-            scale_factor,
-            context: canvas_context,
             text_renderer,
-            assets,
+            assets: HashMap::new(),
             svgs: loaded_svgs,
         }
     }
 
-    fn configure<W: crate::window::Window>(&mut self, w: Arc<RwLock<W>>) {
-        // re-initialize
-        let window = w.read().unwrap();
-        let scale_factor = window.scale_factor();
-
-        let (canvas_context, assets) = init_canvas_renderer(
-            window.raw_display_handle(),
-            window.raw_window_handle(),
-            window.logical_size(),
-            scale_factor,
-            window.assets(),
-        );
-
-        let text_renderer = TextRenderer::new(self.fonts.clone());
-
-        self.text_renderer = text_renderer;
-        self.scale_factor = scale_factor;
-        self.context = canvas_context;
-        self.assets = assets;
-    }
-
-    fn resize(&mut self, width: u32, height: u32) {
-        println!("renderer::resize {} {}", width, height);
-
-        let canvas = &mut self.context.gl_canvas;
-        let surface: &Surface<WindowSurface> = &mut self.context.gl_surface;
-
-        let gl_context = &mut self.context.gl_context;
-
-        surface.resize(
-            gl_context,
-            NonZeroU32::new(width).unwrap(),
-            NonZeroU32::new(height).unwrap(),
-        );
-
-        canvas.set_size(width, height, self.scale_factor);
-    }
-
-    fn render(&mut self, node: &Node, _physical_size: PixelSize) {
-        let canvas = &mut self.context.gl_canvas;
-        let surface: &Surface<WindowSurface> = &mut self.context.gl_surface;
+    fn render(&mut self, node: &Node, _physical_size: PixelSize, ctx: &mut (dyn Any + 'static)) {
+        let context = &mut ctx.downcast_mut::<GlCanvasContext>().unwrap();
+        let canvas = &mut context.gl_canvas;
+        let surface: &Surface<WindowSurface> = &context.gl_surface;
         let text_renderer = &mut self.text_renderer;
 
-        let gl_context = &mut self.context.gl_context;
+        let gl_context = &context.gl_context;
 
         let _ = gl_context
             .make_current(surface)
@@ -217,7 +148,7 @@ impl super::Renderer for CanvasRenderer {
             Color::rgba(0, 0, 0, 0),
         );
 
-        for (renderable, aabb, frame) in node.iter_renderables() {
+        for (renderable, _, _) in node.iter_renderables() {
             match renderable {
                 Renderable::Rect(rect) => {
                     rect.render(canvas);
@@ -257,11 +188,5 @@ impl super::Renderer for CanvasRenderer {
         Caches {
             font: Arc::new(RwLock::new(FontCache::new(self.fonts.clone()))),
         }
-    }
-}
-
-impl Drop for CanvasRenderer {
-    fn drop(&mut self) {
-        println!("drop renderer");
     }
 }
