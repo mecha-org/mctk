@@ -27,6 +27,8 @@ pub struct GlCanvasContext {
     pub gl_surface: egl::surface::Surface<WindowSurface>,
     // femto canvas
     pub gl_canvas: Canvas<OpenGl>,
+    // canvas images
+    pub images: HashMap<String, ImageId>,
 }
 
 impl RendererContext for GlCanvasContext {}
@@ -160,7 +162,7 @@ impl super::Renderer for CanvasRenderer {
                     circle.render(canvas);
                 }
                 Renderable::Image(image) => {
-                    image.render(canvas, &mut self.assets);
+                    image.render(canvas, &mut context.images);
                 }
                 Renderable::Svg(svg) => {
                     svg.render(canvas, &mut self.svgs);
@@ -170,6 +172,9 @@ impl super::Renderer for CanvasRenderer {
                 }
                 Renderable::RadialGradient(rg) => {
                     rg.render(canvas);
+                }
+                Renderable::Curve(curve) => {
+                    curve.render(canvas);
                 }
             }
         }
