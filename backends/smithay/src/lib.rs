@@ -56,6 +56,7 @@ pub enum WindowMessage {
         event: WindowEvent,
     },
 }
+unsafe impl Send for WindowMessage {}
 #[derive(Debug, Copy, Clone)]
 pub enum WindowEvent {
     CloseRequested,

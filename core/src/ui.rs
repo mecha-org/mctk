@@ -383,12 +383,13 @@ impl<
                 gl::init_gl_canvas(&gl_display, (width, height), *scale_factor.read().unwrap());
 
             // load assets
-            canvas::load_assets_to_canvas(&mut gl_canvas, assets);
+            let images = canvas::load_assets_to_canvas(&mut gl_canvas, assets);
 
             let mut gl_context = GlCanvasContext {
                 gl_canvas,
                 gl_context,
                 gl_surface,
+                images,
             };
 
             for msg in receiver.iter() {

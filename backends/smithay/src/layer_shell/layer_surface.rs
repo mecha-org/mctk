@@ -243,7 +243,7 @@ impl LayerShellSctkWindow {
         layer.set_keyboard_interactivity(layer_opts.keyboard_interactivity);
         layer.set_anchor(layer_opts.anchor);
         layer.set_exclusive_zone(layer_opts.zone);
-
+        layer.set_layer(layer_opts.layer);
         layer.commit();
     }
 
