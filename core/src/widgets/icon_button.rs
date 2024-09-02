@@ -31,6 +31,8 @@ pub struct IconButton {
     pub icon_type: IconType,
     pub on_click: Option<Box<dyn Fn() -> Message + Send + Sync>>,
     pub tool_tip: Option<String>,
+    pub on_press: Option<Box<dyn Fn() -> Message + Send + Sync>>,
+    pub on_release: Option<Box<dyn Fn() -> Message + Send + Sync>>,
 }
 
 impl std::fmt::Debug for IconButton {
@@ -48,6 +50,8 @@ impl IconButton {
             icon_type: IconType::Svg,
             on_click: None,
             tool_tip: None,
+            on_press: None,
+            on_release: None,
             state: Some(IconButtonState::default()),
             dirty: false,
             class: Default::default(),
@@ -57,6 +61,15 @@ impl IconButton {
 
     pub fn on_click(mut self, f: Box<dyn Fn() -> Message + Send + Sync>) -> Self {
         self.on_click = Some(f);
+        self
+    }
+
+    pub fn on_press(mut self, f: Box<dyn Fn() -> Message + Send + Sync>) -> Self {
+        self.on_press = Some(f);
+        self
+    }
+    pub fn on_release(mut self, f: Box<dyn Fn() -> Message + Send + Sync>) -> Self {
+        self.on_release = Some(f);
         self
     }
 
@@ -161,10 +174,12 @@ impl Component for IconButton {
 
     fn on_touch_drag_start(&mut self, event: &mut event::Event<event::TouchDragStart>) {
         event.stop_bubbling();
+        self.state_mut().pressed = false;
     }
 
     fn on_drag_start(&mut self, event: &mut event::Event<event::DragStart>) {
         event.stop_bubbling();
+        self.state_mut().pressed = false;
     }
 
     fn on_drag_end(&mut self, _event: &mut event::Event<event::DragEnd>) {
@@ -177,18 +192,30 @@ impl Component for IconButton {
 
     fn on_mouse_down(&mut self, event: &mut event::Event<event::MouseDown>) {
         self.state_mut().pressed = true;
+        if let Some(f) = &self.on_press {
+            event.emit(f());
+        }
     }
 
-    fn on_mouse_up(&mut self, _event: &mut event::Event<event::MouseUp>) {
+    fn on_mouse_up(&mut self, event: &mut event::Event<event::MouseUp>) {
         self.state_mut().pressed = false;
+        if let Some(f) = &self.on_release {
+            event.emit(f());
+        }
     }
 
     fn on_touch_down(&mut self, event: &mut event::Event<event::TouchDown>) {
         self.state_mut().pressed = true;
+        if let Some(f) = &self.on_press {
+            event.emit(f());
+        }
     }
 
-    fn on_touch_up(&mut self, _event: &mut event::Event<event::TouchUp>) {
+    fn on_touch_up(&mut self, event: &mut event::Event<event::TouchUp>) {
         self.state_mut().pressed = false;
+        if let Some(f) = &self.on_release {
+            event.emit(f());
+        }
     }
 
     fn on_click(&mut self, event: &mut event::Event<event::Click>) {

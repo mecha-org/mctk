@@ -65,6 +65,8 @@ impl Component for RoundedRect {
             .pos(pos)
             .scale(Scale { width, height })
             .color(self.background_color)
+            .border_color(self.border_color)
+            .border_size(self.border_width)
             .scissor(self.scissor)
             .radius(self.radius)
             .build()

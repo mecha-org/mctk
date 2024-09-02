@@ -192,11 +192,11 @@ impl Default for Style {
             ),
             (
                 StyleKey::new("IconButton", "border_color", None),
-                Color::BLACK.into(),
+                Color::TRANSPARENT.into(),
             ),
             (
                 StyleKey::new("IconButton", "border_width", None),
-                2.0.into(),
+                0.0.into(),
             ),
             (StyleKey::new("IconButton", "radius", None), 4.0.into()),
             (StyleKey::new("IconButton", "padding", None), 2.0.into()),

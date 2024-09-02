@@ -3,7 +3,7 @@ use std::time::Instant;
 // use super::ToolTip;
 use crate::component::{Component, Message};
 use crate::font_cache::TextSegment;
-use crate::style::{HorizontalPosition, Styled};
+use crate::style::Styled;
 use crate::{event, lay, rect};
 use crate::{node, node::Node};
 use crate::{size_pct, types::*};
@@ -21,6 +21,8 @@ struct ButtonState {
 pub struct Button {
     pub label: Vec<TextSegment>,
     pub on_click: Option<Box<dyn Fn() -> Message + Send + Sync>>,
+    pub on_press: Option<Box<dyn Fn() -> Message + Send + Sync>>,
+    pub on_release: Option<Box<dyn Fn() -> Message + Send + Sync>>,
     pub on_double_click: Option<Box<dyn Fn() -> Message + Send + Sync>>,
     pub tool_tip: Option<String>,
 }
@@ -40,6 +42,8 @@ impl Button {
             on_click: None,
             on_double_click: None,
             tool_tip: None,
+            on_press: None,
+            on_release: None,
             state: Some(ButtonState::default()),
             dirty: false,
             class: Default::default(),
@@ -49,6 +53,15 @@ impl Button {
 
     pub fn on_click(mut self, f: Box<dyn Fn() -> Message + Send + Sync>) -> Self {
         self.on_click = Some(f);
+        self
+    }
+
+    pub fn on_press(mut self, f: Box<dyn Fn() -> Message + Send + Sync>) -> Self {
+        self.on_press = Some(f);
+        self
+    }
+    pub fn on_release(mut self, f: Box<dyn Fn() -> Message + Send + Sync>) -> Self {
+        self.on_release = Some(f);
         self
     }
 
@@ -99,7 +112,10 @@ impl Component for Button {
         .push(node!(super::Text::new(self.label.clone())
             .style("size", self.style_val("font_size").unwrap())
             .style("color", self.style_val("text_color").unwrap())
-            .style("h_alignment", self.style_val("h_alignment").unwrap()),));
+            .style("h_alignment", self.style_val("h_alignment").unwrap())
+            .style("font", self.style_val("font").unwrap())
+            .style("font_weight", self.style_val("font_weight").unwrap())
+            .style("line_height", self.style_val("line_height").unwrap()),));
 
         // if let (Some(p), Some(tt)) = (self.state_ref().tool_tip_open, self.tool_tip.as_ref()) {
         //     base = base.push(node!(
@@ -151,10 +167,12 @@ impl Component for Button {
 
     fn on_touch_drag_start(&mut self, event: &mut event::Event<event::TouchDragStart>) {
         event.stop_bubbling();
+        self.state_mut().pressed = false;
     }
 
     fn on_drag_start(&mut self, event: &mut event::Event<event::DragStart>) {
         event.stop_bubbling();
+        self.state_mut().pressed = false;
     }
 
     fn on_drag_end(&mut self, _event: &mut event::Event<event::DragEnd>) {
@@ -167,10 +185,16 @@ impl Component for Button {
 
     fn on_mouse_down(&mut self, event: &mut event::Event<event::MouseDown>) {
         self.state_mut().pressed = true;
+        if let Some(f) = &self.on_press {
+            event.emit(f());
+        }
     }
 
-    fn on_mouse_up(&mut self, _event: &mut event::Event<event::MouseUp>) {
+    fn on_mouse_up(&mut self, event: &mut event::Event<event::MouseUp>) {
         self.state_mut().pressed = false;
+        if let Some(f) = &self.on_release {
+            event.emit(f());
+        }
     }
 
     fn on_click(&mut self, event: &mut event::Event<event::Click>) {
@@ -181,10 +205,16 @@ impl Component for Button {
 
     fn on_touch_down(&mut self, event: &mut event::Event<event::TouchDown>) {
         self.state_mut().pressed = true;
+        if let Some(f) = &self.on_press {
+            event.emit(f());
+        }
     }
 
-    fn on_touch_up(&mut self, _event: &mut event::Event<event::TouchUp>) {
+    fn on_touch_up(&mut self, event: &mut event::Event<event::TouchUp>) {
         self.state_mut().pressed = false;
+        if let Some(f) = &self.on_release {
+            event.emit(f());
+        }
     }
 
     fn on_double_click(&mut self, event: &mut event::Event<event::DoubleClick>) {
