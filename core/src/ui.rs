@@ -798,6 +798,9 @@ impl<
                 }
 
                 self.event_cache.touch_position = pos;
+                let mut motion_event =
+                    Event::new(event::TouchMotion { x: pos.x, y: pos.y }, &self.event_cache);
+                self.handle_event_without_focus(Node::touch_motion, &mut motion_event, None);
 
                 let touch_held = self.event_cache.touch_held;
                 if touch_held {

@@ -844,6 +844,13 @@ impl Node {
         self.handle_event_under_touch(event, |node, e| node.component.on_touch_up(e));
     }
 
+    pub(crate) fn touch_motion(&mut self, event: &mut Event<event::TouchMotion>) {
+        self.handle_event_under_touch(event, |node, e| {
+            e.target = Some(node.id);
+            node.component.on_touch_motion(e)
+        });
+    }
+
     pub(crate) fn touch_cancel(&mut self, event: &mut Event<event::TouchCancel>) {
         self.handle_targeted_event(event, |node, e| node.component.on_touch_cancel(e));
     }

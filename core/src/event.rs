@@ -156,13 +156,13 @@ impl EventInput for TouchUp {}
 
 /// [`EventInput`] type for touch moved events.
 #[derive(Debug)]
-pub struct TouchMoved {
+pub struct TouchMotion {
     /// Location of touch along the x axis
     pub x: f32,
     /// Location of touch along the y axis
     pub y: f32,
 }
-impl EventInput for TouchMoved {}
+impl EventInput for TouchMotion {}
 
 /// [`EventInput`] type for touch cnacel events.
 #[derive(Debug)]
