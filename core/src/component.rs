@@ -223,6 +223,7 @@ pub trait Component: fmt::Debug {
     /// Handle touch up events. These events will only be sent if the touch is over the Component.
     fn on_touch_up(&mut self, _event: &mut Event<event::TouchUp>) {}
     /// Handle touch up events. These events will only be sent if the touch is over the Component.
+    fn on_touch_motion(&mut self, _event: &mut Event<event::TouchMotion>) {}
     /// Handle touch cancel events. These events will only be sent if the touch is over the Component.
     fn on_touch_cancel(&mut self, _event: &mut Event<event::TouchCancel>) {}
     /// Handle scroll events. These events will only be sent if the mouse is over the Component.
