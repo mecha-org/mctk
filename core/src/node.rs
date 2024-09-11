@@ -395,14 +395,16 @@ impl Node {
                             background_color: Color::TRANSPARENT,
                             border_color: Color::TRANSPARENT,
                             border_width: 0.,
-                            radius: (0., 0., 0., 0.)
+                            radius: (0., 0., 0., 0.),
+                            swipe: 0
                         })),
                         Box::new(node!(widgets::RoundedRect {
                             scissor: Some(false),
                             background_color: Color::TRANSPARENT,
                             border_color: Color::TRANSPARENT,
                             border_width: 0.,
-                            radius: (0., 0., 0., 0.)
+                            radius: (0., 0., 0., 0.),
+                            swipe: 0
                         })),
                     );
                     clip_start.render_cache = clip_start.component.render(context.clone());

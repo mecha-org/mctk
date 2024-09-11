@@ -13,6 +13,7 @@ pub struct RoundedRect {
     pub border_width: f32,
     pub radius: (f32, f32, f32, f32),
     pub scissor: Option<bool>,
+    pub swipe: i32,
 }
 
 impl Default for RoundedRect {
@@ -23,6 +24,7 @@ impl Default for RoundedRect {
             border_width: 0.0,
             radius: (3.0, 3.0, 3.0, 3.0),
             scissor: None,
+            swipe: 0,
         }
     }
 }
@@ -35,11 +37,17 @@ impl RoundedRect {
             border_width: 0.0,
             radius: (radius, radius, radius, radius),
             scissor: None,
+            swipe: 0,
         }
     }
 
     pub fn radius(mut self, r: f32) -> Self {
         self.radius = (r, r, r, r);
+        self
+    }
+
+    pub fn swipe(mut self, s: i32) -> Self {
+        self.swipe = s;
         self
     }
 }
@@ -53,6 +61,7 @@ impl Component for RoundedRect {
         (self.radius.1 as i32).hash(hasher);
         (self.radius.2 as i32).hash(hasher);
         (self.radius.3 as i32).hash(hasher);
+        (self.swipe.hash(hasher));
     }
 
     fn render(&mut self, context: RenderContext) -> Option<Vec<Renderable>> {
