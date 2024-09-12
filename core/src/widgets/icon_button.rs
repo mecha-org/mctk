@@ -33,6 +33,7 @@ pub struct IconButton {
     pub tool_tip: Option<String>,
     pub on_press: Option<Box<dyn Fn() -> Message + Send + Sync>>,
     pub on_release: Option<Box<dyn Fn() -> Message + Send + Sync>>,
+    pub disabled: bool,
 }
 
 impl std::fmt::Debug for IconButton {
@@ -52,6 +53,7 @@ impl IconButton {
             tool_tip: None,
             on_press: None,
             on_release: None,
+            disabled: false,
             state: Some(IconButtonState::default()),
             dirty: false,
             class: Default::default(),
@@ -80,6 +82,11 @@ impl IconButton {
 
     pub fn icon_type(mut self, it: IconType) -> Self {
         self.icon_type = it;
+        self
+    }
+
+    pub fn disabled(mut self, d: bool) -> Self {
+        self.disabled = d;
         self
     }
 }
@@ -173,24 +180,40 @@ impl Component for IconButton {
     }
 
     fn on_touch_drag_start(&mut self, event: &mut event::Event<event::TouchDragStart>) {
+        if self.disabled {
+            return;
+        }
+
         event.stop_bubbling();
         self.state_mut().pressed = false;
     }
 
     fn on_drag_start(&mut self, event: &mut event::Event<event::DragStart>) {
+        if self.disabled {
+            return;
+        }
         event.stop_bubbling();
         self.state_mut().pressed = false;
     }
 
     fn on_drag_end(&mut self, _event: &mut event::Event<event::DragEnd>) {
+        if self.disabled {
+            return;
+        }
         self.state_mut().pressed = false;
     }
 
     fn on_touch_drag_end(&mut self, _event: &mut event::Event<event::TouchDragEnd>) {
+        if self.disabled {
+            return;
+        }
         self.state_mut().pressed = false;
     }
 
     fn on_mouse_down(&mut self, event: &mut event::Event<event::MouseDown>) {
+        if self.disabled {
+            return;
+        }
         self.state_mut().pressed = true;
         if let Some(f) = &self.on_press {
             event.emit(f());
@@ -198,6 +221,9 @@ impl Component for IconButton {
     }
 
     fn on_mouse_up(&mut self, event: &mut event::Event<event::MouseUp>) {
+        if self.disabled {
+            return;
+        }
         self.state_mut().pressed = false;
         if let Some(f) = &self.on_release {
             event.emit(f());
@@ -205,6 +231,9 @@ impl Component for IconButton {
     }
 
     fn on_touch_down(&mut self, event: &mut event::Event<event::TouchDown>) {
+        if self.disabled {
+            return;
+        }
         self.state_mut().pressed = true;
         if let Some(f) = &self.on_press {
             event.emit(f());
@@ -212,6 +241,9 @@ impl Component for IconButton {
     }
 
     fn on_touch_up(&mut self, event: &mut event::Event<event::TouchUp>) {
+        if self.disabled {
+            return;
+        }
         self.state_mut().pressed = false;
         if let Some(f) = &self.on_release {
             event.emit(f());
@@ -219,6 +251,9 @@ impl Component for IconButton {
     }
 
     fn on_click(&mut self, event: &mut event::Event<event::Click>) {
+        if self.disabled {
+            return;
+        }
         if let Some(f) = &self.on_click {
             event.emit(f());
         }
