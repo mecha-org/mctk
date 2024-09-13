@@ -803,7 +803,7 @@ impl<
                 self.handle_event_without_focus(Node::touch_motion, &mut motion_event, None);
 
                 let touch_held = self.event_cache.touch_held;
-                if touch_held {
+                if touch_held && self.event_cache.is_touch_drag {
                     let mut drag_event = Event::new(
                         event::TouchDrag {
                             start_pos: self.event_cache.touch_drag_started.unwrap(),
