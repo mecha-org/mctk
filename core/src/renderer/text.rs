@@ -75,6 +75,11 @@ impl TextRenderer {
         }
     }
 
+    pub fn clear(&mut self) {
+        self.rendered_glyphs.clear();
+        self.glyph_textures.clear();
+    }
+
     pub fn draw_text(
         &mut self,
         canvas: &mut Canvas<OpenGl>,

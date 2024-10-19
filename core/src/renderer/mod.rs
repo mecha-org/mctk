@@ -35,5 +35,7 @@ pub(crate) trait Renderer: fmt::Debug + std::marker::Sized + Send + Sync {
     fn configure<W: crate::window::Window>(&mut self, window: Arc<RwLock<W>>) {}
     fn render(&mut self, _node: &Node, _physical_size: PixelSize, ctx: &mut (dyn Any + 'static)) {}
     fn resize(&mut self, width: u32, height: u32) {}
+    // use this method to clear any saved references or caches
+    fn clear(&mut self) {}
     fn caches(&self) -> Caches;
 }
