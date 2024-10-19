@@ -130,6 +130,14 @@ impl super::Renderer for CanvasRenderer {
         }
     }
 
+    fn resize(&mut self, _: u32, _: u32) {
+        // clear any saved canvas linked caches,
+        // for e.g the text renderer stored glyphs
+        // that were rendered by the canvas
+        // but during resizing canvas is re-initialized
+        self.text_renderer.clear();
+    }
+
     fn render(&mut self, node: &Node, _physical_size: PixelSize, ctx: &mut (dyn Any + 'static)) {
         let context = &mut ctx.downcast_mut::<GlCanvasContext>().unwrap();
         let canvas = &mut context.gl_canvas;

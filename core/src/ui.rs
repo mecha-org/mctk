@@ -303,11 +303,14 @@ impl<
         self.logical_size = Arc::new(RwLock::new(window.logical_size()));
 
         // update the renderer canvas
-        let renderer = self.renderer.write().unwrap();
+        let mut renderer = self.renderer.write().unwrap();
 
         if renderer.is_none() {
             return;
         }
+
+        // clear any caches stored with the renderer
+        renderer.as_mut().unwrap().resize(width, height);
 
         // kill the existing thread
         self.render_channel
