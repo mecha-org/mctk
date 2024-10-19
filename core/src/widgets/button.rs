@@ -113,9 +113,9 @@ impl Component for Button {
             .style("size", self.style_val("font_size").unwrap())
             .style("color", self.style_val("text_color").unwrap())
             .style("h_alignment", self.style_val("h_alignment").unwrap())
-            .style("font", self.style_val("font").unwrap())
-            .style("font_weight", self.style_val("font_weight").unwrap())
-            .style("line_height", self.style_val("line_height").unwrap()),));
+            .maybe_style("font", self.style_val("font"))
+            .maybe_style("font_weight", self.style_val("font_weight"))
+            .maybe_style("line_height", self.style_val("line_height")),));
 
         // if let (Some(p), Some(tt)) = (self.state_ref().tool_tip_open, self.tool_tip.as_ref()) {
         //     base = base.push(node!(

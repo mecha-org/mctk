@@ -57,7 +57,7 @@ impl Component for Text {
         (self.style_val("size").unwrap().f32() as u32).hash(hasher);
         (self.style_val("color").unwrap().color()).hash(hasher);
         (self.style_val("font").map(|p| p.str().to_string())).hash(hasher);
-        (self.style_val("h_alignment").unwrap().horizontal_position()).hash(hasher);
+        (self.style_val("h_alignment").map(|v| v.horizontal_position())).hash(hasher);
     }
 
     fn fill_bounds(
@@ -117,18 +117,31 @@ impl Component for Text {
 
     fn render(&mut self, context: RenderContext) -> Option<Vec<Renderable>> {
         let h_alignment: HorizontalPosition =
-            self.style_val("h_alignment").unwrap().horizontal_position();
+            if let Some(h_alignment) = self.style_val("h_alignment") {
+                h_alignment.horizontal_position()
+            } else {
+                HorizontalPosition::Left
+            };
         let font = self.style_val("font").map(|p| p.str().to_string());
         let color: Color = self.style_val("color").into();
         let scale = context.aabb.size();
-        let size: f32 = self.style_val("size").unwrap().f32();
+        let size: f32 = if let Some(size) = self.style_val("size") {
+            size.f32()
+        } else {
+            16.
+        };
         let AABB { pos, .. } = context.aabb;
-        let font_weight = self.style_val("font_weight").unwrap().font_weight();
-        let mut line_height = size * 1.3; // line height as 1.3 of font_size
-
-        if self.style_val("line_height").is_some() {
-            line_height = self.style_val("line_height").unwrap().f32();
-        }
+        let font_weight = if let Some(font_weight) = self.style_val("font_weight") {
+            font_weight.font_weight()
+        } else {
+            FontWeight::Normal
+        };
+        // line height as 1.3 of font_size
+        let line_height = if let Some(line_height) = self.style_val("line_height") {
+            line_height.f32()
+        } else {
+            size * 1.3
+        };
 
         // let font = Some(String::from("SpaceGrotesk-Bold"));
 
