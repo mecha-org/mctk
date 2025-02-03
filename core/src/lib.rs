@@ -24,6 +24,9 @@ pub mod reexports {
 #[macro_use]
 pub mod widgets;
 
+#[macro_use]
+pub mod animations;
+
 pub mod types;
 pub use types::*;
 
