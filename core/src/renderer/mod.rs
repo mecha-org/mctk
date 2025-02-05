@@ -23,9 +23,9 @@ use std::{
 
 /// The caches used by the Renderer. Passed to [`Component#render`][crate::Component#method.render] in a [`RenderContext`][crate::RenderContext].
 #[derive(Clone)]
-pub struct Caches {
+pub struct Caches<'a> {
     /// Font cache
-    pub font: Arc<RwLock<FontCache>>,
+    pub font: Arc<RwLock<&'a mut FontCache>>,
 }
 
 pub trait RendererContext {}
@@ -37,5 +37,5 @@ pub(crate) trait Renderer: fmt::Debug + std::marker::Sized + Send + Sync {
     fn resize(&mut self, width: u32, height: u32) {}
     // use this method to clear any saved references or caches
     fn clear(&mut self) {}
-    fn caches(&self) -> Caches;
+    fn caches(&mut self) -> Caches;
 }

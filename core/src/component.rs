@@ -33,13 +33,13 @@ macro_rules! msg {
 
 /// Passed to [`Component#render`][Component#method.render], with context required for rendering.
 #[derive(Clone)]
-pub struct RenderContext {
+pub struct RenderContext<'a> {
     /// The `AABB` that contains the given [`Component`] instance.
     pub aabb: AABB,
     /// For scrollable Components (Components that return a `Some` value for [`#scroll_position`][Component#method.scroll_position]), this is the size of the child Nodes.
     pub inner_scale: Option<Scale>,
     /// The caches used by the renderer.
-    pub caches: Caches,
+    pub caches: Caches<'a>,
     /// The value previously returned by [`Component#render`][Component#method.render] of the given instance.
     pub prev_state: Option<Vec<Renderable>>,
     /// The scale factor of the current monitor. Renderables should be scaled by this value.

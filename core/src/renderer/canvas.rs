@@ -91,7 +91,7 @@ pub fn load_assets_to_canvas(
 }
 
 pub struct CanvasRenderer {
-    fonts: cosmic_text::fontdb::Database,
+    fonts_cache: FontCache,
     text_renderer: TextRenderer,
     assets: HashMap<String, ImageId>,
     svgs: HashMap<String, SvgData>,
@@ -123,7 +123,7 @@ impl super::Renderer for CanvasRenderer {
         let loaded_svgs = load_svg_paths(svgs, fonts.clone());
 
         Self {
-            fonts: fonts.clone(),
+            fonts_cache: FontCache::new(fonts.clone()),
             text_renderer,
             assets: HashMap::new(),
             svgs: loaded_svgs,
@@ -197,10 +197,10 @@ impl super::Renderer for CanvasRenderer {
     }
 
     /// This default is provided for tests, it should be overridden
-    fn caches(&self) -> Caches {
+    fn caches(&mut self) -> Caches {
         // println!("caches()");
         Caches {
-            font: Arc::new(RwLock::new(FontCache::new(self.fonts.clone()))),
+            font: Arc::new(RwLock::new(&mut self.fonts_cache)),
         }
     }
 }
