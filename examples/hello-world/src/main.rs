@@ -6,8 +6,8 @@ use mctk_core::reexports::smithay_client_toolkit::{
 };
 use mctk_core::renderables::Renderable;
 use mctk_smithay::layer_shell::layer_surface::LayerOptions;
-use mctk_smithay::layer_shell::layer_window::{LayerWindow, LayerWindowParams};
-use mctk_smithay::xdg_shell::xdg_window::{self, XdgWindowMessage, XdgWindowParams};
+use mctk_smithay::layer_shell::layer_window::{LayerWindow, LayerWindowMessage, LayerWindowParams};
+// use mctk_smithay::xdg_shell::xdg_window::{self, XdgWindow, XdgWindowMessage, XdgWindowParams};
 use mctk_smithay::{WindowInfo, WindowMessage, WindowOptions};
 use smithay_client_toolkit::reexports::calloop::channel::Sender;
 use std::any::Any;
@@ -19,6 +19,7 @@ use tokio::time;
 #[derive(Debug)]
 pub enum AppMessage {
     Exit,
+    CreateSubsurface,
 }
 
 #[derive(Debug, Clone)]
@@ -30,7 +31,7 @@ pub struct AppParams {
 pub struct AppState {
     value: f32,
     btn_pressed: bool,
-    window_sender: Option<Sender<XdgWindowMessage>>,
+    window_sender: Option<Sender<LayerWindowMessage>>,
     app_channel: Option<Sender<AppMessage>>,
 }
 
@@ -45,6 +46,7 @@ enum HelloEvent {
         update_type: String,
     },
     Exit,
+    CreateSubsurface,
 }
 
 #[component(State = "AppState")]
@@ -79,7 +81,7 @@ impl Component for App {
 
         Some(
             node!(
-                Div::new().bg(Color::rgb(255., 0., 0.)),
+                Div::new().bg(Color::rgb(0., 0., 255.)),
                 lay![
                     size: size_pct!(100.0),
                     direction: Direction::Column
@@ -87,7 +89,7 @@ impl Component for App {
             )
             .push(node!(
                 Button::new(txt!("Click"))
-                    .on_click(Box::new(|| msg!(HelloEvent::Exit)))
+                    .on_click(Box::new(|| msg!(HelloEvent::CreateSubsurface)))
                     .on_double_click(Box::new(|| msg!(HelloEvent::ButtonPressed {
                         name: "Double clicked".to_string()
                     })))
@@ -109,6 +111,15 @@ impl Component for App {
             }
             Some(HelloEvent::Exit) => {
                 println!("button clicked");
+            }
+            Some(HelloEvent::CreateSubsurface) => {
+                println!("HelloEvent::CreateSubsurface");
+                let _ = self
+                    .state_ref()
+                    .app_channel
+                    .clone()
+                    .unwrap()
+                    .send(AppMessage::CreateSubsurface);
             }
             _ => (),
         }
@@ -157,7 +168,7 @@ fn launch_ui(id: i32) -> anyhow::Result<()> {
 
     let window_opts = WindowOptions {
         height: 300 as u32,
-        width: 350 as u32,
+        width: 300 as u32,
         scale_factor: 1.0,
     };
 
@@ -201,6 +212,12 @@ fn launch_ui(id: i32) -> anyhow::Result<()> {
                     println!("app channel message {:?}", AppMessage::Exit);
                     let _ = window_tx_2.send(WindowMessage::WindowEvent {
                         event: mctk_smithay::WindowEvent::CloseRequested,
+                    });
+                }
+                AppMessage::CreateSubsurface => {
+                    println!("app channel message {:?}", AppMessage::CreateSubsurface);
+                    let _ = window_tx_2.send(WindowMessage::WindowEvent {
+                        event: mctk_smithay::WindowEvent::CreateSubsurface,
                     });
                 }
             },

@@ -17,9 +17,7 @@ use std::collections::HashMap;
 use crate::input::keyboard::{keysym_to_key, keysym_to_text, KeyboardEvent};
 use crate::input::touch::TouchEvent;
 use crate::WindowInfo;
-use crate::{
-    input::pointer, layer_shell::layer_surface, WindowEvent, WindowMessage, WindowOptions,
-};
+use crate::{input::pointer, WindowEvent, WindowMessage, WindowOptions};
 
 use super::xdg_surface::XdgShellSctkWindow;
 
@@ -149,6 +147,9 @@ impl XdgWindow {
                                     WindowEvent::CloseRequested => {
                                         ui.handle_input(&Input::Exit);
                                         app_window.close();
+                                    }
+                                    WindowEvent::CreateSubsurface => {
+                                        app_window.create_subsurface();
                                     }
                                     WindowEvent::Focused => {
                                         ui.handle_input(&Input::Focus(true));

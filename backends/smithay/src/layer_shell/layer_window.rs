@@ -159,6 +159,9 @@ impl LayerWindow {
                                         ui.handle_input(&Input::Exit);
                                         app_window.close();
                                     }
+                                    WindowEvent::CreateSubsurface => {
+                                        app_window.create_subsurface();
+                                    }
                                     WindowEvent::Focused => {
                                         ui.handle_input(&Input::Focus(true));
                                     }

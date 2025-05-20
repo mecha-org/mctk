@@ -1,6 +1,6 @@
 pub mod input;
 pub mod layer_shell;
-pub mod session_lock;
+// pub mod session_lock;
 pub mod xdg_shell;
 
 use input::keyboard::KeyboardEvent;
@@ -68,6 +68,7 @@ pub enum WindowEvent {
     Mouse(MouseEvent),
     Keyboard(KeyboardEvent),
     Touch(TouchEvent),
+    CreateSubsurface,
 }
 
 pub fn new_raw_wayland_handle(wl_display: &WlDisplay, wl_surface: &WlSurface) -> RawWaylandHandle {

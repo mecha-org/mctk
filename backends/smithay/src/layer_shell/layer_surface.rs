@@ -11,8 +11,9 @@ use ahash::AHashMap;
 use anyhow::Context;
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
-    delegate_compositor, delegate_keyboard, delegate_layer, delegate_output, delegate_pointer,
-    delegate_registry, delegate_seat, delegate_touch,
+    delegate_activation, delegate_compositor, delegate_keyboard, delegate_layer, delegate_output,
+    delegate_pointer, delegate_registry, delegate_seat, delegate_shm, delegate_subcompositor,
+    delegate_touch, delegate_xdg_shell, delegate_xdg_window,
     output::{OutputHandler, OutputState},
     reexports::{
         calloop::{
@@ -49,12 +50,17 @@ use smithay_client_toolkit::{
         wlr_layer::{self, LayerShell, LayerShellHandler, LayerSurface},
         WaylandSurface,
     },
+    shm::{
+        slot::{Buffer, SlotPool},
+        Shm, ShmHandler,
+    },
+    subcompositor::SubcompositorState,
 };
 use wayland_client::{
     globals::BindError,
     protocol::{
         wl_display::WlDisplay,
-        wl_registry,
+        wl_registry, wl_shm,
         wl_touch::{self, WlTouch},
     },
     Dispatch,
@@ -83,6 +89,11 @@ pub struct LayerShellSctkWindow {
     text_input: Option<ZwpTextInputV3>,
     pub scale_factor: f32,
     exit: bool,
+    compositor: CompositorState,
+    subcompositor: SubcompositorState,
+    shm: Shm,
+    pool: SlotPool,
+    buffer: Option<Buffer>,
 }
 
 #[derive(Debug, Clone)]
@@ -143,8 +154,14 @@ impl LayerShellSctkWindow {
         let compositor = CompositorState::bind(&globals, &queue_handle)
             .context("wl_compositor not availible")?;
 
+        let subcompositor =
+            SubcompositorState::bind(compositor.wl_compositor().clone(), &globals, &queue_handle)
+                .unwrap();
+
         let layer_shell =
             LayerShell::bind(&globals, &queue_handle).context("layer shell not availible")?;
+
+        let shm = Shm::bind(&globals, &queue_handle).expect("wl shm is not available.");
 
         let surface = compositor.create_surface(&queue_handle);
         let layer =
@@ -174,6 +191,8 @@ impl LayerShellSctkWindow {
             });
         }
 
+        let pool = SlotPool::new(100 * 100 * 4, &shm).expect("Failed to create pool");
+
         let mut state = LayerShellSctkWindow {
             // app,
             // conn,
@@ -201,6 +220,11 @@ impl LayerShellSctkWindow {
             // gl_context,
             // gl_surface,
             // gl_canvas,
+            compositor,
+            subcompositor,
+            shm,
+            pool,
+            buffer: None,
         };
         if let Ok(text_input_manager) = state
             .registry_state
@@ -292,6 +316,89 @@ impl LayerShellSctkWindow {
         // request next frame
         layer.wl_surface().frame(qh, layer.wl_surface().clone());
         layer.commit();
+    }
+
+    pub fn create_subsurface(&mut self) {
+        let qh = &self.queue_handle;
+        let parent = self.layer.wl_surface().clone();
+        let (wl_subsurface, wl_surface) = self.subcompositor.create_subsurface(parent.clone(), qh);
+        wl_subsurface.set_position(0, 0);
+        wl_subsurface.place_above(&parent);
+        let width = 100;
+        let height = 380;
+        let stride = width as i32 * 4;
+
+        // We don't know how large the window will be yet, so lets assume the minimum size we suggested for the
+        // initial memory allocation.
+
+        let buffer = self.buffer.get_or_insert_with(|| {
+            self.pool
+                .create_buffer(
+                    width as i32,
+                    height as i32,
+                    stride,
+                    wl_shm::Format::Argb8888,
+                )
+                .expect("create buffer")
+                .0
+        });
+
+        let canvas = match self.pool.canvas(buffer) {
+            Some(canvas) => canvas,
+            None => {
+                // This should be rare, but if the compositor has not released the previous
+                // buffer, we need double-buffering.
+                let (second_buffer, canvas) = self
+                    .pool
+                    .create_buffer(
+                        width as i32,
+                        height as i32,
+                        stride,
+                        wl_shm::Format::Argb8888,
+                    )
+                    .expect("create buffer");
+                *buffer = second_buffer;
+                canvas
+            }
+        };
+
+        // Draw to the window:
+        {
+            let shift = 0;
+            canvas
+                .chunks_exact_mut(4)
+                .enumerate()
+                .for_each(|(index, chunk)| {
+                    let x = ((index + shift as usize) % width as usize) as u32;
+                    let y = (index / width as usize) as u32;
+
+                    let a = 0xFF;
+                    let r = u32::min(((width - x) * 0xFF) / width, ((height - y) * 0xFF) / height);
+                    let g = u32::min((x * 0xFF) / width, ((height - y) * 0xFF) / height);
+                    let b = u32::min(((width - x) * 0xFF) / width, (y * 0xFF) / height);
+                    let color = (a << 24) + (r << 16) + (g << 8) + b;
+
+                    let array: &mut [u8; 4] = chunk.try_into().unwrap();
+                    *array = color.to_le_bytes();
+                });
+        }
+
+        wl_surface.damage_buffer(0, 0, width as i32, height as i32);
+
+        self.layer
+            .wl_surface()
+            .damage_buffer(0, 0, self.width as i32, self.height as i32);
+
+        self.layer
+            .wl_surface()
+            .frame(qh, self.layer.wl_surface().clone());
+
+        buffer.attach_to(&wl_surface).expect("buffer attach");
+
+        parent.commit();
+        wl_surface.commit();
+        self.layer.commit();
+        println!("window committed");
     }
 }
 
@@ -736,7 +843,14 @@ impl Dispatch<ZwpTextInputManagerV3, ()> for LayerShellSctkWindow {
     }
 }
 
+impl ShmHandler for LayerShellSctkWindow {
+    fn shm_state(&mut self) -> &mut Shm {
+        &mut self.shm
+    }
+}
+
 delegate_compositor!(LayerShellSctkWindow);
+delegate_subcompositor!(LayerShellSctkWindow);
 delegate_output!(LayerShellSctkWindow);
 delegate_seat!(LayerShellSctkWindow);
 delegate_keyboard!(LayerShellSctkWindow);
@@ -744,3 +858,4 @@ delegate_pointer!(LayerShellSctkWindow);
 delegate_touch!(LayerShellSctkWindow);
 delegate_layer!(LayerShellSctkWindow);
 delegate_registry!(LayerShellSctkWindow);
+delegate_shm!(LayerShellSctkWindow);
