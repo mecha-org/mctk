@@ -1,3 +1,13 @@
+> ⚠️ **Archived Project**
+>
+> This repository is archived and no longer actively maintained or developed.
+> Issues, pull requests, and feature requests are not being accepted.
+
+> For Mecha's GUI we switched to using GPUI with Impeller seemed easier, you can refer here - https://github.com/mecha-org/zed
+
+--------------------
+
+
 # MCTK - A High-Performance Rust UI Toolkit
 MCTK is an opinionated, performance-first UI toolkit written in Rust. It is primarily being developed to build the MCTK Launcher and other applications for low-performance devices.The toolkit's API is heavily inspired by Flutter's declarative widget system, aiming to provide a familiar and productive developer experience. By adopting a tried and tested API design, we can focus on a robust implementation tailored to our specific hardware and performance needs.
 ## Core Architecture
